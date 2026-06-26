@@ -31,7 +31,7 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/For-a-few-DPPs-more/rgbn"
 "Source" = "https://github.com/For-a-few-DPPs-more/rgbn"
-"Documentation" = "https://blue_sampler.readthedocs.io"
+"Documentation" = "https://blue-sampler.readthedocs.io"
 "Colab"  = "https://colab.research.google.com/github.com/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb"
 PyPI = "https://pypi.org/project/blue_sampler/"
 
