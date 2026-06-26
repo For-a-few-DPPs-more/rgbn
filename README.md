@@ -1,25 +1,18 @@
-# blue-sampler
-
 [![PyPI version](https://img.shields.io/pypi/v/blue-sampler.svg)](https://pypi.org/project/blue-sampler/)
 [![Docs](https://img.shields.io/readthedocs/blue-sampler.svg)](https://blue_sampler.readthedocs.io)
 [![GitHub](https://img.shields.io/badge/source-GitHub-black?logo=github)](https://github.com/For-a-few-DPPs-more/rgbn)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github.com/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
----
+# blue-sampler
 
 Generate large **stealthy point patterns** on the unit torus [0, 1)^D. Stealthy point patterns have vanishing density fluctuations at low ("blue") frequencies, making them useful for Monte Carlo integration, image stippling, and any application that needs well-spread, low-discrepancy points. The main blue noise sampler (RGBN) implemented here have **linear** complexity in the number of points and the dimension, and run in under 15 minutes for 1 million 2D points.
-
-
----
 
 ## 📦 Installation
 
 ```bash
 pip install blue_sampler
 ````
-
----
 
 ## 🚀 Quick start
 
