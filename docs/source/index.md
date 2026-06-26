@@ -3,13 +3,6 @@
 ```{include} ../../README.md
 ```
 
-## Links
-
-- 🌐 [project website](https://for-a-few-dpps-more.github.io/rgbn/)
-- 📦 [PyPI](https://pypi.org/project/blue_sampler/)
-- 🐙 [GitHub repository](https://github.com/For-a-few-DPPs-more/rgbn)
-- 📚 [documentation (Read the Docs)](https://blue_sampler.readthedocs.io)
-
 ## Main API
 
 ### Stippling
