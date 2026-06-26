@@ -54,7 +54,7 @@ x = blue.im2points(image="zebra.jpg")
 
 ## 📚 Links
 
-* 🌐 Project website: [https://for-a-few-dpps-more/rgbn.github.io](https://for-a-few-dpps-more/rgbn.github.io)
+* 🌐 Project website: [https://for-a-few-dpps-more.github.io/rgbn/](https://for-a-few-dpps-more.github.io/rgbn/)
 * 📦 PyPI: [https://pypi.org/project/blue-sampler/](https://pypi.org/project/blue-sampler/)
 * 🐙 GitHub: [https://github.com/For-a-few-DPPs-more/rgbn](https://github.com/For-a-few-DPPs-more/rgbn)
 * 📖 Documentation: [https://blue-sampler.readthedocs.io](https://blue-sampler.readthedocs.io)
