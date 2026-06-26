@@ -51,10 +51,10 @@ def im2points(image = "anything.jpg", N = 100_000):
 def sample_points(
     N: int = 2**15,
     D: int = 2,
+    targets: NDArray | None = None,
     bruteforce: bool = False,
     warmstart: str | NDArray | None = None,
     n_iter: int = 6,
-    targets: NDArray | None = None,
     verbose: int = 1,
 ) -> NDArray:
     """

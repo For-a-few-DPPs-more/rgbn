@@ -8,7 +8,7 @@ samples on the unit torus [0, 1)^D.
 Quick start
 -----------
 >>> import blue_sampler as blue
->>> x = blue.sample(N=10_000, D=2)          # (10000, 2) array
+>>> x = blue.sample_points(N=10_000, D=2)
 >>> blue.plot(x)
 >>> blue.plot_structure_factor(x)
 """
