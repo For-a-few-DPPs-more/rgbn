@@ -1,7 +1,5 @@
 ---
-layout: default
+layout: page
 ---
-
-# blue-sampler
 
 {% include_relative README.md %}
