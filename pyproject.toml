@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name        = "blue_sampler"
-version     = "0.1.16"
+version     = "0.1.17"
 description = "Large points sampling on the unit torus [0, 1)^D, either with uniform blue noise propriety (vanishing density fluctuations) or with target density (stippling)"
 readme      = "README.md"
 license     = { text = "MIT" }
