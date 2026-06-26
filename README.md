@@ -1,9 +1,8 @@
-[![PyPI](https://img.shields.io/pypi/v/blue-sampler.svg?label=pypi&color=brightgreen)](https://pypi.org/project/blue-sampler/)
+[![PyPI](https://img.shields.io/pypi/v/blue-sampler.svg)](https://pypi.org/project/blue-sampler/)
 [![Docs](https://readthedocs.org/projects/blue-sampler/badge/?version=latest)](https://blue-sampler.readthedocs.io)
 [![GitHub](https://img.shields.io/badge/source-GitHub-black?logo=github)](https://github.com/For-a-few-DPPs-more/rgbn)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](
-https://colab.research.google.com/github/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb
-)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb)
+
 
 # blue-sampler
 
