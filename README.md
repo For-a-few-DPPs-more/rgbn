@@ -14,7 +14,7 @@ number of points and the dimension, and run in under 15 minutes for 1 million 2D
 
 ## Links
 
-- 🌐 [project website](https://for-a-few-dpps-more.github.io/rgbn/)
+- 🌐 [project website](https://for-a-few-dpps-more/rgbn.github.io)
 - 📦 [PyPI](https://pypi.org/project/blue_sampler/)
 - 🐙 [GitHub repository](https://github.com/For-a-few-DPPs-more/rgbn)
 - 📚 [documentation (Read the Docs)](https://blue_sampler.readthedocs.io)
