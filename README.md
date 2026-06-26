@@ -1,8 +1,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/blue-sampler.svg)](https://pypi.org/project/blue-sampler/)
-[![Docs](https://img.shields.io/readthedocs/blue-sampler.svg)](https://blue_sampler.readthedocs.io)
+[![Docs](https://img.shields.io/readthedocs/blue-sampler.svg)](https://blue-sampler.readthedocs.io)
 [![GitHub](https://img.shields.io/badge/source-GitHub-black?logo=github)](https://github.com/For-a-few-DPPs-more/rgbn)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github.com/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 # blue-sampler
 
@@ -58,7 +57,7 @@ x = blue.im2points(image="zebra.jpg")
 * 🌐 Project website: [https://for-a-few-dpps-more/rgbn.github.io](https://for-a-few-dpps-more/rgbn.github.io)
 * 📦 PyPI: [https://pypi.org/project/blue-sampler/](https://pypi.org/project/blue-sampler/)
 * 🐙 GitHub: [https://github.com/For-a-few-DPPs-more/rgbn](https://github.com/For-a-few-DPPs-more/rgbn)
-* 📖 Documentation: [https://blue_sampler.readthedocs.io](https://blue_sampler.readthedocs.io)
+* 📖 Documentation: [https://blue_sampler.readthedocs.io](https://blue-sampler.readthedocs.io)
 
 ---
 
