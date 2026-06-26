@@ -1,6 +1,4 @@
-docs = [
-    "sphinx",
-    "sphinx-rtd-theme",
-    "myst-parser",
-    "sphinx-autodoc-typehints",
-]
+sphinx
+sphinx-rtd-theme
+myst-parser
+sphinx-autodoc-typehints
