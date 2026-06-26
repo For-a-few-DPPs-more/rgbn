@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/For-a-few-DPPs-more/hyperuniform-samplers"
+Repository = "https://github.com/For-a-few-DPPs-more/rgbn"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/blue_sampler"]
