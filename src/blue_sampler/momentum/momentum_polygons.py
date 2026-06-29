@@ -1,27 +1,63 @@
-import math
+"""Moment matching for simple polygons in R^2.
+
+Notation follows Lotz & Klatt, "Persistence of asymptotic variance under
+transport" (arXiv:2605.22803), Eq. (1.8); see momentum_clusters.py for the
+shared docstring on q-indexing and central-moment conventions. Here the
+"cell" C is a polygon (vertices ordered along its boundary) and the
+quadrature nodes X_1, ..., X_n are matched against the polygon's own
+moments 1/lambda_2(C) * int_C x^q dx instead of a discrete sum.
+
+Raw moments int_P x^i y^j dA of a simple polygon P are computed via
+Green's theorem as a sum over edges (no hardcoded order cutoff, valid for
+any i, j >= 0):
+
+    int_P x^i y^j dA = 1/(i+j+2) * sum_edges cross_e * int_0^1 x_e(t)^i y_e(t)^j dt
+
+where, for an edge from (x, y) to (xn, yn): cross_e = x*yn - xn*y,
+x_e(t) = x + t*(xn - x), y_e(t) = y + t*(yn - y). The inner integral has
+the closed binomial form used in `_edge_integral` below.
+"""
+
+from math import comb
 
 import numpy as np
 
 
-FORMULAS = {
-    (1, 0): lambda x, xn, y, yn: (x + xn) / 6,
-    (0, 1): lambda x, xn, y, yn: (y + yn) / 6,
-    (2, 0): lambda x, xn, y, yn: (x**2 + x*xn + xn**2) / 12,
-    (1, 1): lambda x, xn, y, yn: (2*x*y + x*yn + xn*y + 2*xn*yn) / 24,
-    (0, 2): lambda x, xn, y, yn: (y**2 + y*yn + yn**2) / 12,
-    (3, 0): lambda x, xn, y, yn: (x**3 + x**2*xn + x*xn**2 + xn**3) / 20,
-    (2, 1): lambda x, xn, y, yn:
-        (3*x**2*y + x**2*yn + 2*x*xn*y + 2*x*xn*yn + xn**2*y + 3*xn**2*yn)/60,
-    (1, 2): lambda x, xn, y, yn:
-        (3*x*y**2 + y**2*xn + 2*x*y*yn + 2*xn*y*yn + x*yn**2 + 3*xn*yn**2)/60,
-    (0, 3): lambda x, xn, y, yn: (y**3 + y**2*yn + y*yn**2 + yn**3)/20,
-}
+def _edge_integral(i, j, x, xn, y, yn):
+    """int_0^1 x(t)^i y(t)^j dt for x(t) = x + t*(xn - x), y(t) = y + t*(yn - y).
+
+    Closed binomial-expansion form (verified against direct symbolic
+    integration): sum_{a<=i, b<=j} C(i,a) C(j,b) x^a dx^{i-a} y^b dy^{j-b}
+    / ((i-a)+(j-b)+1).
+    """
+
+    dx = xn - x
+    dy = yn - y
+
+    out = np.zeros_like(x)
+
+    for a in range(i + 1):
+
+        xa = x ** a * dx ** (i - a)
+
+        for b in range(j + 1):
+
+            denom = (i - a) + (j - b) + 1
+
+            out += (
+                comb(i, a) * comb(j, b)
+                * xa
+                * y ** b * dy ** (j - b)
+                / denom
+            )
+
+    return out
 
 
 def raw_moments(vertices, order):
+    """Raw moments {(i, j): M_ij} for 0 <= i + j <= order, via Green's theorem."""
 
     assert vertices.shape[-1] == 2
-    assert order <= 3
 
     x = vertices[..., 0]
     y = vertices[..., 1]
@@ -35,26 +71,36 @@ def raw_moments(vertices, order):
         (0, 0): 0.5 * cross.sum(1)
     }
 
-    for key, f in FORMULAS.items():
+    for total in range(1, order + 1):
+        for i in range(total + 1):
 
-        if sum(key) > order:
-            continue
+            j = total - i
 
-        out[key] = np.sum(
-            cross * f(x, xn, y, yn),
-            axis=1,
-        )
+            integral = _edge_integral(i, j, x, xn, y, yn)
+
+            out[(i, j)] = np.sum(
+                cross * integral,
+                axis=1,
+            ) / (i + j + 2)
 
     return out
 
 
 def central_moments(vertices, orders):
+    """Centroid and central moments of a polygon, for the given (i, j) orders.
+
+    `orders` may be empty (e.g. p = 2, centroid only): the centroid is
+    always computed from raw moments up to order 1, and `moments` is
+    returned with shape (B, 0).
+    """
 
     assert vertices.shape[-1] == 2
 
+    max_order = max((sum(alpha) for alpha in orders), default=1)
+
     raw = raw_moments(
         vertices,
-        max(sum(o) for o in orders),
+        max(max_order, 1),
     )
 
     area = raw[(0, 0)]
@@ -79,8 +125,8 @@ def central_moments(vertices, orders):
             for b in range(j + 1):
 
                 m += (
-                    math.comb(i, a)
-                    * math.comb(j, b)
+                    comb(i, a)
+                    * comb(j, b)
                     * (-cx) ** (i - a)
                     * (-cy) ** (j - b)
                     * raw[(a, b)]

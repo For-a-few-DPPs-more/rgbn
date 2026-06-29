@@ -1,23 +1,55 @@
+"""Moment matching for point clusters (weighted point sets in R^D).
+
+Notation follows Lotz & Klatt, "Persistence of asymptotic variance under
+transport" (arXiv:2605.22803), Eq. (1.8):
+
+    1/lambda_d(C) * int_C x^q dx = 1/n * sum_{j=1}^n X_j^q,   q in {0, ..., p-1}
+
+Here a "cell" C is replaced by a weighted point cloud (the `distribution`
+to be matched), q ranges over multi-indices alpha with |alpha| = sum(alpha)
+in {0, ..., p-1}, and x^q denotes the monomial x_1^{alpha_1} ... x_D^{alpha_D}.
+
+q = 0 is the trivial total-mass condition (always satisfied once weights
+sum to 1). q = 1 fixes the centroid. q >= 2 are genuine *central* moment
+constraints once the centroid has been subtracted out, which is how they
+are represented here (`moment_orders` only returns alpha with
+2 <= |alpha| <= p - 1; the centroid itself is handled separately).
+"""
+
 from itertools import product
 
 import numpy as np
 
 
-def central_moment_orders(p, D):
+def moment_orders(p, D):
+    """Multi-indices alpha in N_0^D with 2 <= |alpha| <= p - 1.
+
+    These are the non-trivial central-moment orders q referenced in
+    Eq. (1.8) for q in {0, ..., p-1}: q = 0 (mass) and q = 1 (centroid)
+    are excluded since they are handled separately.
+    """
 
     out = [
-        a
-        for a in product(range(p + 1), repeat=D)
-        if 2 <= sum(a) <= p
+        alpha
+        for alpha in product(range(p), repeat=D)
+        if 2 <= sum(alpha) <= p - 1
     ]
 
     return sorted(
         out,
-        key=lambda a: (sum(a), a),
+        key=lambda alpha: (sum(alpha), alpha),
     )
 
 
 def weighted_central_moments(points, weights, orders):
+    """Centroid and central moments of a weighted point cloud.
+
+    points:  (B, n, D)   -- X_1, ..., X_n per batch
+    weights: (B, n)       -- normalized weights (sum to 1 along axis 1)
+    orders:  list of multi-indices alpha, |alpha| >= 2
+
+    Returns (centroid, moments) with centroid: (B, D), moments: (B, len(orders)).
+    """
 
     centroid = np.sum(
         points * weights[..., None],
@@ -46,8 +78,12 @@ def weighted_central_moments(points, weights, orders):
 
 
 def moments_and_jacobian(points, weights, orders):
+    """Centroid, central moments, and their Jacobians w.r.t. point coordinates.
 
-    B, N, D = points.shape
+    weights are treated as fixed (1/n each); only point positions X_j vary.
+    """
+
+    B, n, D = points.shape
 
     centroid = np.sum(
         points * weights[None, :, None],
@@ -56,19 +92,19 @@ def moments_and_jacobian(points, weights, orders):
 
     delta = points - centroid[:, None]
 
-    Jc = np.zeros((B, D, N, D))
+    Jc = np.zeros((B, D, n, D))
 
     for d in range(D):
         Jc[:, d, :, d] = weights
 
-    Jc = Jc.reshape(B, D, N * D)
+    Jc = Jc.reshape(B, D, n * D)
 
     moments = np.empty((B, len(orders)))
-    Jm = np.zeros((B, len(orders), N * D))
+    Jm = np.zeros((B, len(orders), n * D))
 
     for k, alpha in enumerate(orders):
 
-        term = np.ones((B, N))
+        term = np.ones((B, n))
 
         for d, a in enumerate(alpha):
             term *= delta[..., d] ** a
@@ -113,14 +149,19 @@ def solve_moments_lm(
     lambda0=1e-2,
     tol=1e-12,
 ):
+    """Levenberg-Marquardt solve for X_1, ..., X_n matching centroid + moments.
 
-    B, N, D = init_points.shape
+    Weights are fixed to 1/n (equal-weight quadrature / averaging set, as in
+    Eq. (1.8): "1/n * sum_j X_j^q").
+    """
 
-    w = np.full(N, 1 / N)
+    B, n, D = init_points.shape
+
+    w = np.full(n, 1 / n)
 
     points = init_points.copy()
 
-    eye = np.eye(N * D)[None]
+    eye = np.eye(n * D)[None]
 
     lam = np.full(B, lambda0)
 
@@ -167,7 +208,7 @@ def solve_moments_lm(
         )[..., 0]
 
         trial = points.reshape(B, -1) + delta
-        trial = trial.reshape(B, N, D)
+        trial = trial.reshape(B, n, D)
 
         r2, J2 = residuals(trial)
 

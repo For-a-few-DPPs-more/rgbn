@@ -1,7 +1,27 @@
+"""Fit a small averaging set X_1, ..., X_n to a target distribution's moments.
+
+Notation follows Lotz & Klatt, "Persistence of asymptotic variance under
+transport" (arXiv:2605.22803), Section 5.2 / Eq. (1.8):
+
+    1/lambda_d(C) * int_C x^q dx = 1/n * sum_{j=1}^n X_j^q,   q in {0, ..., p-1}
+
+`p` is the article's p: the moments q = 0, ..., p-1 of the target cell C
+(a weighted point cloud for geometry="clusters", or a polygon boundary for
+geometry="polygons") are matched by an equal-weight quadrature / averaging
+set of n points. q = 0 (total mass) is automatic once weights/areas are
+normalized; q = 1 fixes the centroid; q = 2, ..., p-1 are the genuine
+central-moment constraints solved for via Levenberg-Marquardt.
+
+There is no `n` argument: n is computed automatically (see `required_n`)
+as the smallest point count giving at least as many free coordinates as
+scalar constraints. When p == 2 only the centroid is requested, so n = 1
+and the target centroid is returned directly with no LM solve at all.
+"""
+
 import numpy as np
 
 from .momentum_clusters import (
-    central_moment_orders,
+    moment_orders,
     weighted_central_moments,
     solve_moments_lm,
 )
@@ -9,14 +29,64 @@ from .momentum_clusters import (
 from .momentum_polygons import central_moments as polygon_central_moments
 
 
+MAX_P = 6
+
+
+def required_n(p, D):
+    """The smallest n for which the equal-weight averaging set has at
+    least as many free coordinates (n points x D coords) as scalar
+    constraints (D for the centroid, plus one per central-moment order
+    q in {2, ..., p-1}): n = ceil((D + len(moment_orders(p, D))) / D).
+
+    This is a necessary condition (not sufficient) for the moment-fit
+    problem to be well posed -- it guarantees the system is not
+    under-determined, not that an exact solution exists for every target
+    distribution.
+    """
+
+    n_constraints = D + len(moment_orders(p, D))
+
+    return -(-n_constraints // D)  # ceil division
+
+
+def _centroid_only(distribution, geometry, weights):
+    """Just the target centroid (q = 1), no central moments computed."""
+
+    if geometry == "clusters":
+
+        B, n, _ = distribution.shape
+
+        if weights is None:
+            weights = np.full((B, n), 1 / n)
+
+        centroid, _ = weighted_central_moments(
+            distribution,
+            weights,
+            orders=[],
+        )
+
+        return centroid
+
+    if geometry == "polygons":
+
+        centroid, _ = polygon_central_moments(
+            distribution,
+            orders=[],
+        )
+
+        return centroid
+
+    raise ValueError(geometry)
+
+
 def _target(distribution, geometry, orders, weights):
 
     if geometry == "clusters":
 
-        B, N, _ = distribution.shape
+        B, n, _ = distribution.shape
 
         if weights is None:
-            weights = np.full((B, N), 1 / N)
+            weights = np.full((B, n), 1 / n)
 
         return weighted_central_moments(
             distribution,
@@ -67,29 +137,47 @@ def _init(distribution, geometry, n, rng):
 def momentum_fit(
     distribution,
     distribution_type="clusters",
-    n=6,
     p=3,
     weights=None,
     n_restarts=1,
-    restart_tol=1e-8,
-    n_iter=50,
+    restart_tol=1e-30,
+    n_iter=100,
     lambda0=1e-2,
-    tol=1e-12,
+    tol=1e-30,
     random_state=None,
 ):
+    """Fit n points X_1, ..., X_n whose centroid and central moments
+    (q = 1, ..., p-1) match those of `distribution`.
 
-    gtype = distribution_type
+    n is determined automatically (see `required_n`): it is not a
+    parameter. When p == 2, only the centroid (q = 1) is requested; no
+    central moments and no LM solve are needed, so the n = 1 target
+    centroid is returned directly.
+    """
+
+    geometry = distribution_type
     D = distribution.shape[-1]
 
-    if gtype == "polygons":
+    if geometry == "polygons":
         assert D == 2
-        assert p <= 3
 
-    orders = central_moment_orders(p, D)
+    if not (2 <= p <= MAX_P):
+        raise ValueError(f"p must satisfy 2 <= p <= {MAX_P}, got {p}")
+
+    orders = moment_orders(p, D)
+
+    n = required_n(p, D)
+
+    if p == 2:
+        # Only q = 1 (the centroid) is requested: n = 1, and the unique
+        # point matching the centroid is the centroid itself. No
+        # central-moment constraints, no LM solve needed.
+        centroid = _centroid_only(distribution, geometry, weights)
+        return centroid[:, None, :], None
 
     target_centroid, target_moments = _target(
         distribution,
-        gtype,
+        geometry,
         orders,
         weights,
     )
@@ -104,7 +192,7 @@ def momentum_fit(
 
         init = _init(
             distribution,
-            gtype,
+            geometry,
             n,
             rng,
         )
