@@ -307,7 +307,6 @@ def tile(x: NDArray, repeat: int, flatoutput: bool = True) -> NDArray:
 def from_geometry(
     geometry: NDArray,
     gtype: str,
-    n: int = 6,
     p: int = 3,
     **kwargs
 ) -> NDArray:
@@ -328,11 +327,9 @@ def from_geometry(
           `sample_tessels(..., return_atoms=True)`.
     gtype : {"polygons", "clusters"}
         Geometry type. "polygons" only supports D = 2.
-    n : int, default 6
-        Number of output points per tessel or cluster.
     p : int, default 3
         Maximum total moment order to match (centroid plus central moments
-        up to order p). geometry_type="polygons" only supports p <= 3.
+        up to order p). 
     **kwargs :
         Additional arguments passed to `momentum_fit` (e.g., n_restarts, 
         random_state, tol).
@@ -347,17 +344,15 @@ def from_geometry(
             f"Unknown geometry type: {gtype!r}, "
             f"expected one of ('clusters', 'polygons')"
         )
-        
-    if gtype == "polygons" and p > 3:
-        raise ValueError("Exact polygon moments only support order p <= 3.")
 
-
+    center = geometry.mean(axis = 1)[:, None, :]
+    radius = np.sqrt(((geometry-center)**2).sum(axis = 2).mean(axis = 1))[:, None, None]
+    geometry = (geometry - center)/radius
     points, _ = momentum_fit(
         distribution=geometry,
         distribution_type=gtype,
-        n=n,
         p=p,
         **kwargs
     )
     
-    return points
+    return points*radius + center
