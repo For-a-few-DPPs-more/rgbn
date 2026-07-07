@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name        = "blue_sampler"
-version     = "0.1.18"
+version     = "1.0.0"
 description = "Stealthy point-pattern sampling on the unit torus"
 readme      = "README.md"
 license     = { text = "MIT" }
@@ -22,7 +22,6 @@ dependencies = [
     "jax",
     "jaxlib",
     "matplotlib",
-    "requests",
     "squarenet",
 ]
 
