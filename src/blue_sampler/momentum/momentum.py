@@ -31,6 +31,25 @@ from .momentum_polygons import central_moments as polygon_central_moments
 
 MAX_P = 6
 
+def from_geometry(geometry, gtype, p, **kwargs):
+
+    if gtype not in ("clusters", "polygons"):
+        raise ValueError(
+            f"Unknown geometry type: {gtype!r}, "
+            f"expected one of ('clusters', 'polygons')"
+        )
+
+    center = geometry.mean(axis = 1)[:, None, :]
+    radius = np.sqrt(((geometry-center)**2).sum(axis = 2).mean(axis = 1))[:, None, None]
+    geometry = (geometry - center)/radius
+    points, _ = momentum_fit(
+        distribution=geometry,
+        distribution_type=gtype,
+        p=p,
+        **kwargs
+    )
+    
+    return points*radius + center
 
 def required_n(p, D):
     """The smallest n for which the equal-weight averaging set has at
