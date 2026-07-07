@@ -28,7 +28,7 @@ from .progress import ProgressLogger
 from .run.run_tessels import _tesselation
 from .run.run_clusters import _clusterisation
 
-from .momentum.momentum import momentum_fit
+from .momentum.momentum import from_geometry
 
 from .viz import plot
 
@@ -43,10 +43,15 @@ _PRESETS = {
 def im2points(image = "anything.jpg", N = 100_000):
     """
     simple wrapper for image stippling
+
+    Return
+    ------
+    points : ndarray of shape (N, D)
+        The sampled point coordinates in [0, 1)^D.
     """
-    sample = sample_points(N = N, D = 2, targets = image)
-    plot(sample, figsize = (10, 10))
-    return sample
+    points = sample_points(N = N, D = 2, targets = image)
+    plot(points, figsize = (10, 10))
+    return points
 
 def sample_points(
     N: int = 2**15,
@@ -304,29 +309,39 @@ def tile(x: NDArray, repeat: int, flatoutput: bool = True) -> NDArray:
 
     return xtiled.reshape(-1, D) if flatoutput else xtiled
 
-def from_geometry(
-    geometry: NDArray,
-    gtype: str,
-    p: int = 3,
-    **kwargs
-) -> NDArray:
+def cluster2points(clusters: NDArray, p: int = 3) -> NDArray:
     """
-    Convert tessels or clusters into low-discrepancy point set.
+    Convert clusters into low-discrepancy point set.
 
-    Each tessel or cluster is replaced by n points by solving a
+    Each cluster is replaced by m points by solving a
     moment-matching problem (Levenberg-Marquardt) via `momentum_fit`.
 
     Parameters
     ----------
-    geometry : ndarray
-        Batch of tessels or clusters to convert.
-        - gtype="polygons" : quadrilaterals of shape (N, 4, 2),
-          e.g. the `quad` output of `sample_tessels`.
-        - gtype="clusters" : point sets of shape (N, K, D),
-          e.g. the output of `sample_clusters`, or the `atoms` output of
+    clusters: NDArray of shape (N, k, d)
+         e.g. the output of `sample_clusters`, or the `atoms` output of
           `sample_tessels(..., return_atoms=True)`.
-    gtype : {"polygons", "clusters"}
-        Geometry type. "polygons" only supports D = 2.
+    p : int, default 3
+        Maximum total moment order to match (centroid plus central moments
+        up to order p). 
+    Returns
+    -------
+    ndarray of shape (N, m, D)
+        m points per tessel or cluster, matching its moments up to order p.
+    """
+    return from_geometry(clusters, "clusters", p)
+
+def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
+    """
+    Convert tessels into low-discrepancy point set.
+
+    Each tessel is replaced by m points by solving a
+    moment-matching problem (Levenberg-Marquardt) via `momentum_fit`.
+
+    Parameters
+    ----------
+    tessels: NDArray of shape (n, 4, 2)
+          e.g. the `quad` output of `sample_tessels`.
     p : int, default 3
         Maximum total moment order to match (centroid plus central moments
         up to order p). 
@@ -336,23 +351,7 @@ def from_geometry(
 
     Returns
     -------
-    ndarray of shape (N, n, D)
-        n points per tessel or cluster, matching its moments up to order p.
+    ndarray of shape (N, m, 2)
+        m points per tessel or cluster, matching its moments up to order p.
     """
-    if gtype not in ("clusters", "polygons"):
-        raise ValueError(
-            f"Unknown geometry type: {gtype!r}, "
-            f"expected one of ('clusters', 'polygons')"
-        )
-
-    center = geometry.mean(axis = 1)[:, None, :]
-    radius = np.sqrt(((geometry-center)**2).sum(axis = 2).mean(axis = 1))[:, None, None]
-    geometry = (geometry - center)/radius
-    points, _ = momentum_fit(
-        distribution=geometry,
-        distribution_type=gtype,
-        p=p,
-        **kwargs
-    )
-    
-    return points*radius + center
+    return from_geometry(tessels, "polygons", p)

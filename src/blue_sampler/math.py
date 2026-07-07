@@ -187,7 +187,7 @@ def sample_wave_vectors(kmed: int, kmax: int, D: int, n_high: int) -> np.ndarray
     # ─────────────────────────────
 
     low = integers_in_half_ball(kmed, D)
-   
+
     # ─────────────────────────────
     # HIGH k : isotropic sampling
     # ─────────────────────────────
