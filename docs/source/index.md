@@ -23,8 +23,9 @@
    blue_sampler.sample_points
    blue_sampler.sample_tessels
    blue_sampler.sample_clusters
+   blue_sampler.tessel2points
+   blue_sampler.cluster2points
    blue_sampler.tile
-   blue_sampler.from_geometry
 ```
 
 ### Analysis
