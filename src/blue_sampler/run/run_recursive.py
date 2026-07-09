@@ -31,6 +31,13 @@ from ..grad.fields import make_target
 from ..progress import ProgressLogger
 from .run_bruteforce import _bruteforce_pipeline
 
+_PRESETS = {
+    2: dict(spatial_radius=7, spectral_radius=7, LR_spatial=0.100, LR_spectral=0.1, expension_factor=0.3, S=1.0),
+    3: dict(spatial_radius=5, spectral_radius=5, LR_spatial=0.030, LR_spectral=0.1, expension_factor=0.3, S=1.0),
+    4: dict(spatial_radius=3, spectral_radius=3, LR_spatial=0.010, LR_spectral=0.1, expension_factor=1.0, S=0.5),
+    5: dict(spatial_radius=3, spectral_radius=3, LR_spatial=0.003, LR_spectral=0.1, expension_factor=1.5, S=0.5),
+}
+
 # ── Core pipeline ─────────────────────────────────────────────────────────────
 
 def _recursive_pipeline(

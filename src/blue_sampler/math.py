@@ -233,10 +233,7 @@ def structure_factor(
     precision on low frequencies. Remaining budget is 
     shared evenly accross all pertinent frequency scales.
     """
-    pts = np.asarray(points)
-    if pts.size == 0:
-        return np.empty((0,)), np.empty((0,))
-        
+    pts = np.asarray(points).reshape(-1, np.asarray(points).shape[-1])
     N, D = pts.shape
 
     kmed = max(int((resolution/4.0) ** (1.0 / D)), 1)

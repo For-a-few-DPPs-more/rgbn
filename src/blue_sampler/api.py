@@ -21,24 +21,18 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 from .run.run_bruteforce import _bruteforce_pipeline
-from .run.run_recursive import _recursive_pipeline
+from .run.run_recursive import _PRESETS, _recursive_pipeline
 from .warm_start import _sobol_warmstart
 from .progress import ProgressLogger
 
 from .run.run_tessels import _tesselation
 from .run.run_clusters import _clusterisation
 
+from .pinwheels import BASE, subdivide, full_transform
+
 from .momentum.momentum import from_geometry
 
 from .viz import plot
-
-_PRESETS = {
-    2: dict(spatial_radius=7, spectral_radius=7, LR_spatial=0.100, LR_spectral=0.1, expension_factor=0.3, S=1.0),
-    3: dict(spatial_radius=5, spectral_radius=5, LR_spatial=0.030, LR_spectral=0.1, expension_factor=0.3, S=1.0),
-    4: dict(spatial_radius=3, spectral_radius=3, LR_spatial=0.010, LR_spectral=0.1, expension_factor=1.0, S=0.5),
-    5: dict(spatial_radius=3, spectral_radius=3, LR_spatial=0.003, LR_spectral=0.1, expension_factor=1.5, S=0.5),
-}
-
 
 def im2points(image = "anything.jpg", N = 100_000):
     """
@@ -355,3 +349,86 @@ def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
         m points per tessel or cluster, matching its moments up to order p.
     """
     return from_geometry(tessels, "polygons", p)
+
+def sobol(N:int = 2**15, D:int = 2):
+    """
+    Simple wrapper upon scipy.stats.qcm.sobol.
+
+    Parameters
+    ----------
+    N : int
+        Number of output points.
+    D : int
+        Spatial dimension.
+    
+    Returns
+    -------
+    points : ndarray of shape (N, D)
+        The sampled point coordinates in [0, 1)^D
+        from a scrambled Sobol sequence
+
+    Notes
+    -----
+    It is recomanded (but not mandatory) that N is a power of 2
+    for higher accuracy
+    """
+    return _sobol_warmstart(N= N, D = D)
+
+def pinwheel_base():
+    """
+    Returns the base Conway triangle for pinwheel aperiodic tiling
+    """
+    return BASE.copy()
+
+def pinwheel_transform(
+    points: NDArray = pinwheel_base(), 
+    depth: int = 4, 
+) -> NDArray:
+    """
+    Apply a Pinwheel tiling transformation to a set of points.
+
+    This function generates a fractal tiling pinwheel_based on the recursive subdivision 
+    of the Conway triangle (Pinwheel tiling) and maps the input points onto 
+    each of the resulting triangles.
+
+    Parameters
+    ----------
+    points : ndarray, default is the pinwheel_base triangle
+        The coordinates of the points to transform, living on the pinwheel_base triangle.
+        - If shape is (2,): the same point is projected onto every 
+          triangle in the tiling.
+        - If shape is (M, 2): the same set of points is projected onto every 
+          triangle in the tiling.
+        - If shape is (N, M, 2): each set of M points is projected onto its 
+          corresponding triangle N.
+    depth : int, optional
+        Number of subdivision iterations. The number of resulting triangles 
+        grows exponentially with depth. Default is 5.
+
+    Returns
+    -------
+    ndarray
+        An array of shape (N, M, 2) containing the transformed points for 
+        each of the N triangles generated at the specified depth.
+
+    Notes
+    -----
+    The Pinwheel tiling is a non-periodic tiling where each triangle is 
+    subdivided into 5 smaller triangles, each rotated by an angle of 
+    $\arctan(1/2)$ relative to the parent.
+    """
+    tiling = pinwheel_base()[None]
+    for _ in range(depth):  
+        tiling = subdivide(tiling)
+
+    tiling = np.concatenate([tiling, -tiling + np.array([[2.0, 1.0]])], axis = 0)
+    tiling = np.concatenate([tiling, tiling* np.array([[-1.0, 1.0]]) + np.array([[2.0, 1.0]])], axis = 0)
+    M, t = full_transform(pinwheel_base(), tiling/2.0)
+
+    if points.ndim == 1:
+        points = np.einsum('nij,j-> ni', M, points) + t
+    elif points.ndim == 2:
+        points = np.einsum('nij,kj->nki', M, points) + t[:, None, :]
+    else:
+        points = np.einsum('nij,nkj->nki', M, points) + t[:, None, :]
+    return points

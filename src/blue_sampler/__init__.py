@@ -12,8 +12,8 @@ Quick start
 >>> blue.plot(x)
 >>> blue.plot_structure_factor(x)
 """
-from .api import im2points, tessel2points, cluster2points, sample_points, sample_tessels, sample_clusters, tile
-from .viz import plot, plot_structure_factor, plot_tessels, plot_clusters
+from .api import im2points, tessel2points, cluster2points, sample_points, sample_tessels, sample_clusters, sobol, pinwheel_base, pinwheel_transform, tile
+from .viz import plot, plot_structure_factor, plot_tessels, plot_clusters, plot_polygons
 from .math import structure_factor
 from .datasets import generate_dataset
 
@@ -24,13 +24,17 @@ __all__ = [
     "sample_points",
     "sample_tessels",
     "sample_clusters",
-    "tile",
+    "sobol",
+    "pinwheel_base",
+    "pinwheel_transform",
     "structure_factor",
     "generate_dataset",
     "plot",
     "plot_structure_factor",
     "plot_tessels",
     "plot_clusters",
+    "plot_polygons",
+    "tile",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

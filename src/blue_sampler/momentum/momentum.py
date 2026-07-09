@@ -29,9 +29,12 @@ from .momentum_clusters import (
 from .momentum_polygons import central_moments as polygon_central_moments
 
 
-MAX_P = 6
+MAX_P = 100
 
 def from_geometry(geometry, gtype, p, **kwargs):
+    no_batch = geometry.ndim == 2
+    if no_batch:
+        geometry = geometry[None]
 
     if gtype not in ("clusters", "polygons"):
         raise ValueError(
@@ -48,8 +51,11 @@ def from_geometry(geometry, gtype, p, **kwargs):
         p=p,
         **kwargs
     )
-    
-    return points*radius + center
+
+    points = points*radius + center
+    if no_batch:
+        points = points[0]
+    return points
 
 def required_n(p, D):
     """The smallest n for which the equal-weight averaging set has at

@@ -12,6 +12,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
+from matplotlib.collections import PolyCollection
 
 from .math import structure_factor as _structure_factor
 from .run.run_tessels import back_merge_tessels
@@ -63,9 +64,12 @@ def plot(
     D = min(pts.shape[-1], 3)
     pts = pts[:, :D]
 
+    scale_min = pts.min()
+    scale_max = pts.max()
+
     if auto_zoom and (len(pts) > max_points):
         zoom = (max_points / len(pts)) ** (1.0 / D)
-        pts = pts[(pts <= zoom).all(axis=1)]
+        pts = pts[(pts <= scale_min*zoom + scale_max).all(axis=1)]
 
     kw = dict(s=10_000/len(pts), color="black")
     kw.update(scatter_kw)
@@ -192,6 +196,7 @@ def show_polygons(ax: plt.Axes, tessels: NDArray) -> plt.Axes:
 
 def plot_tessels(
     tessels: NDArray,
+    axes: plt.Axes | None = None,
     return_fig: bool = False,
 ) -> tuple[plt.Figure, NDArray] | None:
     """
@@ -202,8 +207,12 @@ def plot_tessels(
     ncols = min(3, n_plots) if n_plots > 0 else 1
     nrows = int(np.ceil(n_plots / ncols))
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
-    axes = np.atleast_1d(axes).flatten()
+    if axes is None:
+        fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
+        axes = np.atleast_1d(axes).flatten()
+    
+    else:
+        fig = axes.get_figure()
 
     while depth > 11:
         tessels = back_merge_tessels(tessels)
@@ -253,6 +262,7 @@ def show_clusters(ax: plt.Axes, clusters: NDArray) -> plt.Axes:
 
 def plot_clusters(
     clusters: NDArray,
+    axes: plt.Axes | None = None,
     return_fig: bool = False,
 ) -> tuple[plt.Figure, NDArray] | None:
     """
@@ -263,8 +273,12 @@ def plot_clusters(
     ncols = min(3, n_plots) if n_plots > 0 else 1
     nrows = int(np.ceil(n_plots / ncols))
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
-    axes = np.atleast_1d(axes).flatten()
+    if axes is None:
+        fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
+        axes = np.atleast_1d(axes).flatten()
+    
+    else:
+        fig = axes.get_figure()
 
     while depth > 8:
         clusters = back_merge_clusters(clusters)
@@ -301,3 +315,41 @@ def plot_clusters(
 
     plt.show()
     return None
+
+def plot_polygons(polygons: NDArray, ax: plt.Axes | None = None, return_fig: bool = False):
+    """
+    Visualize a collection of polygons, of shape (N, M, 2)
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
+    else:
+        fig = ax.get_figure()
+    n = len(polygons)
+    cmap = plt.cm.YlGnBu
+    color = cmap(0.2 + 0.8 * (np.random.permutation(np.arange(n)) / n))
+
+    x = polygons[:, :, 0]
+    y = polygons[:, :, 1]
+    x_next = np.roll(x, -1, axis=1)
+    y_next = np.roll(y, -1, axis=1)
+    areas_inv = 1/np.abs(0.5 * np.sum(x * y_next - x_next * y, axis=1))
+    areas_inv2 = (areas_inv)**2
+    areas_inv2 = (areas_inv2/areas_inv2.mean()+0.03).clip(max = 1.0)
+
+    
+    collection = PolyCollection(
+        polygons, 
+        facecolors= color,
+        edgecolor="#FFFFFF",
+        linewidth=1.2,
+        alpha=areas_inv2,
+    )
+    ax.add_collection(collection)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    plt.tight_layout()
+    
+    if return_fig:
+        return fig, ax
+    plt.show()
