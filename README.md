@@ -5,7 +5,7 @@
 
 # blue-sampler
 
-Generate large **stealthy point patterns** on the unit torus [0, 1)^D. Stealthy point patterns have vanishing density fluctuations at low ("blue") frequencies, making them useful for Monte Carlo integration, image stippling, and any application that needs well-spread, low-discrepancy points. The main blue noise sampler (RGBN) implemented here have **linear** complexity in the number of points and the dimension, and run in under 15 minutes for 1 million 2D points.
+Generate large **stealthy point patterns** on the unit torus [0, 1)^D. Stealthy point patterns have vanishing density fluctuations at low frequencies, making them useful for Monte Carlo integration, image stippling, and any application that needs well-spread, low-discrepancy points. The main blue noise sampler (RGBN) implemented here have **linear** complexity in the number of points and the dimension. It run e.g. in under 15 minutes for 1 million 2D points on a standard CPU, and 30 times faster on a GPU.
 
 ## 📦 Installation
 
@@ -26,7 +26,7 @@ blue.plot(x, auto_zoom=True)
 blue.plot_structure_factor(x)
 
 # higher dimensions
-x = blue.sample_points(N=2_000, D=5)
+x = blue.sample_points(N=10_000, D=5)
 
 # image stippling
 x = blue.im2points(image="zebra.jpg")
@@ -51,6 +51,13 @@ x = blue.im2points(image="zebra.jpg")
 
 ---
 
+## Extensions
+
+blue_sampler was extended to sample and plot various type of point sets related to the blue noise.
+- Sobol (quasi random low discrepency sequence)
+- STIT (fair tesselation of the space)
+- Clusters (fair partititions of a target distribution)
+- Pinwheels (aperiodic tiling of the space)
 
 ## 📚 Links
 
