@@ -25,7 +25,9 @@
    blue_sampler.sample_clusters
    blue_sampler.tessel2points
    blue_sampler.cluster2points
-   blue_sampler.tile
+   blue_sampler.sobol,
+   blue_sampler.pinwheel_base,
+   blue_sampler.pinwheel_transform,
 ```
 
 ### Analysis
@@ -47,6 +49,7 @@
    blue_sampler.plot_structure_factor
    blue_sampler.plot_tessels
    blue_sampler.plot_clusters
+   blue_sampler.plot_polygons
 ```
 
 ### Datasets
