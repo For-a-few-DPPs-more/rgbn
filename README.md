@@ -160,10 +160,9 @@ The algorithms and mathematical tools implemented in **blue-sampler** are based 
   **Local density fluctuations, hyperuniformity, and order metrics.**  
   *Physical Review E*, 68(4):041113, 2003.
 
-- **SquareNet — Grid data structure for point clouds**
-    SquareNet [(v1.3.11). 2026](https://squarenet.readthedocs.io/en/latest/).
-    Joint repository codeveloped with RGBN for efficient neighbor queries and Fourier transforms in Python.
-    Documentation
+- **SquareNet** [(v1.3.11). 2026](https://squarenet.readthedocs.io/en/latest/).  
+  Grid data structure for point clouds, codeveloped with RGBN \
+  for efficient neighbor query and fourier trnasform in Python.
 
 - **Sobol sequences**  
   Wrapped from `scipy.stats.qmc.Sobol` (SciPy).
