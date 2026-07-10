@@ -1,6 +1,3 @@
-Voici ton fichier `pyproject.toml` mis à jour. J'ai utilisé les liens que tu as fournis pour compléter la section `[project.urls]` avec la documentation, la page PyPI et le notebook d'exemples sur Colab.
-
-```toml
 [build-system]
 requires = ["hatchling >= 1.26"]
 build-backend = "hatchling.build"
@@ -46,5 +43,3 @@ packages = ["src/blue_sampler"]
 
 [tool.ruff]
 line-length = 100
-
-```
