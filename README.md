@@ -12,7 +12,7 @@ Stealthy point patterns exhibit vanishing density fluctuations at low frequencie
 The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in both the number of points and the dimension. ⚡  
 They can generate e.g. 1 million 2D points in under 15 minutes on a standard CPU, and up to 30× faster on GPU. 
 
-> **Note**: Most implemented methods support adaptive sampling from a target distribution by passing an array of points (sampled i.i.d. from the desired distribution) to the `target` argument.
+> **Note**: Most implemented methods support adaptive sampling from a target distribution.
 
 ---
 
