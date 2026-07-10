@@ -75,17 +75,6 @@ x = blue.sobol(N, D) #(N, D)
 ```
 Low-discrepancy quasi-random sequence. 📏
 
-### STIT Tessellations (2D only)
-
-```python
-# Raw STIT tessellation (quadrilaterals)
-ts = blue.sample_tessels(N) #(N, 4, D=2)
-blue.plot_tessels(ts) 🧩
-
-# Convert to point set
-x = blue.tessel2points(ts) #(N, m, D=2)
-```
-
 ### Clusters
 
 ```python
@@ -95,6 +84,17 @@ blue.plot_clusters(cl) 🔗
 
 # Convert to point set
 x = blue.cluster2points(cl) #(N, m, D)
+```
+
+### STIT Tessellations (2D only)
+
+```python
+# Raw STIT tessellation (quadrilaterals)
+ts = blue.sample_tessels(N) #(N, 4, D=2)
+blue.plot_tessels(ts) 🧩
+
+# Convert to point set
+x = blue.tessel2points(ts) #(N, m, D=2)
 ```
 
 ### Pinwheel Tilings (2D only)
