@@ -1,10 +1,11 @@
 """
-Visualisation helpers:
-plot                  display a 2-D or 3-D point set
-plot_structure_factor display the structure factor estimated through
-                       scattering intensity
-plot_tessels          display a tessellation at up to 12 recursion depths
-plot_clusters         display a cluster partition at up to 12 recursion depths
+Visualisation helpers.
+
+plot                   Scatter plot of a 2-D or 3-D point set.
+plot_structure_factor  Log-log plot of the radial structure factor S(k).
+plot_tessels           Display a STIT tessellation across recursion depths.
+plot_clusters          Display a cluster partition across recursion depths.
+plot_polygons          Display an arbitrary collection of polygons.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 
-from .math import structure_factor 
+from .math import structure_factor
 from .run.run_tessels import back_merge_tessels
 from .run.run_clusters import back_merge_clusters
 
@@ -29,36 +30,39 @@ def plot(
     max_points: int = 30_000,
     ax: plt.Axes | None = None,
     return_fig: bool = False,
-    figsize = (8, 8),
+    figsize: tuple = (8, 8),
     **scatter_kw,
 ) -> tuple[plt.Figure, plt.Axes] | None:
     """
     Scatter plot of a 2-D or 3-D point set.
 
-    If auto_zoom is set to True:
-        For large point sets the view is automatically zoomed
-        so that at most *max_points* points are displayed.
-
     Parameters
     ----------
-    points : ndarray of shape (N, D)
+    points : ndarray of shape (N, D) or (N, M, D)
         Point coordinates, with D in {2, 3}.
-        Higher-dimensional arrays are silently projected onto the first 3 axes.
-    auto_zoom : bool, default True
-        Whether to apply auto_zoom for large point sets.
+        Arrays with more than 2 dimensions are flattened along the leading
+        axes before plotting. Dimensions beyond 3 are silently dropped (only
+        the first 3 coordinates are displayed).
+    auto_zoom : bool, default False
+        If True, large point sets are zoomed in so that at most
+        ``max_points`` points are rendered, keeping the figure responsive.
     max_points : int, default 30_000
-        Maximum number of points to draw used for auto_zoom.
+        Maximum number of points to render when ``auto_zoom`` is True.
     ax : matplotlib Axes, optional
         Existing axes to draw into. If None, a new figure is created.
+        For 3-D data, the axes must have ``projection="3d"``.
     return_fig : bool, default False
-        If True, returns (fig, ax).
-        If False, displays the figure and returns None.
+        If True, return ``(fig, ax)`` instead of calling ``plt.show()``.
+    figsize : tuple, default (8, 8)
+        Figure size in inches, forwarded to ``plt.figure()``.
+        Ignored when ``ax`` is provided.
     **scatter_kw
-        Extra keyword arguments forwarded to `ax.scatter`.
+        Extra keyword arguments forwarded to ``ax.scatter``
+        (e.g. ``color``, ``s``, ``alpha``).
 
     Returns
     -------
-    (fig, ax) or None
+    (fig, ax) if return_fig is True, else None.
     """
     pts = np.asarray(points).reshape(-1, np.asarray(points).shape[-1])
     D = min(pts.shape[-1], 3)
@@ -70,9 +74,9 @@ def plot(
 
     if auto_zoom and (len(pts) > max_points):
         zoom = (max_points / len(pts)) ** (1.0 / D)
-        pts = pts[(pts <= scale_delta*zoom + scale_min).all(axis=1)]
+        pts = pts[(pts <= scale_delta * zoom + scale_min).all(axis=1)]
 
-    kw = dict(s=10_000/len(pts), color="black")
+    kw = dict(s=10_000 / len(pts), color="black")
     kw.update(scatter_kw)
 
     if ax is None:
@@ -115,47 +119,53 @@ def plot_structure_factor(
     """
     Log-log plot of the radial structure factor S(k).
 
-    S(k) is estimated using standard scattering intensity.
+    S(k) is estimated via scattering intensity (squared modulus of the
+    empirical Fourier transform) at a set of wave vectors sampled up to
+    a radius proportional to ``N^(1/D)``.
 
     Parameters
     ----------
     points : ndarray of shape (N, D)
         Point coordinates in [0, 1)^D.
     resolution : int, default 2000
-        Number of sampled wave vectors used to estimate sf.
+        Number of sampled wave vectors. Higher values give a smoother curve
+        at increased computation time.
     smoothed : bool, default True
-        If True, apply a local log-log average. If False, plot raw values.
+        If True, overlay a local log-log Gaussian average on top of the raw
+        scatter. If False, only the raw values are shown.
     min_val : float, default 1e-20
-        minimal value that can be ploted in the log log. Used to avoid
-        overflow when log is applyed.
+        Floor value applied before taking logarithms, to avoid ``log(0)``
+        overflow.
     ax : matplotlib Axes, optional
         Existing axes to draw into. If None, a new figure is created.
     return_fig : bool, default False
-        If True, returns (fig, ax).
+        If True, return ``(fig, ax)`` instead of calling ``plt.show()``.
     **plot_kw
-        Extra keyword arguments forwarded to `ax.loglog`.
+        Extra keyword arguments forwarded to ``ax.loglog`` (smoothed line).
 
     Returns
     -------
-    (fig, ax) or None
+    (fig, ax) if return_fig is True, else None.
+
+    Notes
+    -----
+    A stealthy / blue-noise point set will show S(k) ≈ 0 for small k.
+    This is the visual signature of hyperuniformity.
     """
     pts = np.asarray(points).reshape(-1, np.asarray(points).shape[-1])
     k, S = structure_factor(pts, resolution=resolution)
-    S = S.clip(min = min_val) #avoid overflow in log log
+    S = S.clip(min=min_val)
 
     if smoothed:
         logk = np.log(k)
         sigma = (logk[-1] - logk[0]) * 0.01
         logS = np.log(S)
-
         S_smooth = np.empty_like(logS)
-
         for i in range(len(k)):
-            w = np.exp(-(logk - logk[i])**2 / (2 * sigma**2))
+            w = np.exp(-(logk - logk[i]) ** 2 / (2 * sigma**2))
             w /= w.sum()
             S_smooth[i] = np.exp(np.sum(w * logS))
-        
-        S = S.clip(min = S_smooth.min()) 
+        S = S.clip(min=S_smooth.min())
 
     kw = dict(marker="o", markersize=2, linewidth=2)
     kw.update(plot_kw)
@@ -167,16 +177,15 @@ def plot_structure_factor(
 
     scat_color = "lightgray" if smoothed else "tab:blue"
 
-    ax.set_axisbelow(True)  # grille + ticks in background
+    ax.set_axisbelow(True)
     ax.grid(True, which="both", alpha=0.4, zorder=0)
-
     ax.scatter(k, S, s=5, color=scat_color, alpha=0.6, zorder=2)
     ax.set_xscale("log")
     ax.set_yscale("log")
     if smoothed:
         ax.loglog(k, S_smooth, color="tab:blue", zorder=3, **kw)
 
-    ax.set_xlabel(r"$k = \frac{2\pi}{L}\sqrt{n_x^2 + n_y^2…}$")
+    ax.set_xlabel(r"$k = \frac{2\pi}{L}\sqrt{n_x^2 + n_y^2\,\ldots}$")
     ax.set_ylabel(r"$S(k)$")
     ax.set_title("Structure factor (log-log, scattering intensity)")
     plt.tight_layout()
@@ -193,9 +202,10 @@ def plot_structure_factor(
 # ---------------------------------------------------------------------
 
 def show_polygons(ax: plt.Axes, tessels: NDArray) -> plt.Axes:
+    """Draw a set of quadrilaterals on ``ax`` (internal helper)."""
     for quad in tessels:
         qloop = np.vstack([quad, quad[0]])
-        ax.plot(qloop[:, 0], qloop[:, 1], '-o', ms=3)
+        ax.plot(qloop[:, 0], qloop[:, 1], "-o", ms=3)
         ax.fill(qloop[:, 0], qloop[:, 1], alpha=0.25)
     return ax
 
@@ -206,7 +216,30 @@ def plot_tessels(
     return_fig: bool = False,
 ) -> tuple[plt.Figure, NDArray] | None:
     """
-    Display a tessellation across up to 12 recursion steps.
+    Display a STIT tessellation across successive recursion depths.
+
+    The function starts from the provided tessellation and progressively
+    merges pairs of quadrilaterals to reconstruct coarser levels, then
+    plots each level side by side (up to 12 panels).
+
+    Parameters
+    ----------
+    tessels : ndarray of shape (N, 4, 2)
+        Output of `sample_tessels`. N must be a power of 2.
+    axes : array of matplotlib Axes, optional
+        Pre-existing axes to draw into. If None, a new figure is created
+        with one subplot per recursion depth.
+    return_fig : bool, default False
+        If True, return ``(fig, axes)`` instead of calling ``plt.show()``.
+
+    Returns
+    -------
+    (fig, axes) if return_fig is True, else None.
+
+    Examples
+    --------
+    >>> ts = blue.sample_tessels(N=1024)
+    >>> blue.plot_tessels(ts)
     """
     depth = int(np.log2(len(tessels)))
     n_plots = min(depth, 12)
@@ -216,7 +249,6 @@ def plot_tessels(
     if axes is None:
         fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
         axes = np.atleast_1d(axes).flatten()
-    
     else:
         fig = axes.get_figure()
 
@@ -226,9 +258,8 @@ def plot_tessels(
 
     for k in reversed(range(n_plots)):
         show_polygons(axes[k], np.random.permutation(tessels))
-        axes[k].set_aspect('equal')
+        axes[k].set_aspect("equal")
         axes[k].axis("off")
-
         if k > 0:
             tessels = back_merge_tessels(tessels)
 
@@ -246,6 +277,7 @@ def plot_tessels(
 # ---------------------------------------------------------------------
 
 def show_clusters(ax: plt.Axes, clusters: NDArray) -> plt.Axes:
+    """Scatter-plot a cluster partition on ``ax``, colour-coded by cluster (internal helper)."""
     n_clusters, n_points_per_cluster, _ = clusters.shape
     cmap = plt.get_cmap("tab20" if n_clusters > 10 else "tab10")
 
@@ -260,9 +292,7 @@ def show_clusters(ax: plt.Axes, clusters: NDArray) -> plt.Axes:
 
     colors = cmap(flat_indices % cmap.N)
 
-    ax.scatter(flat_pts[order, 0], flat_pts[order, 1],
-               s=4, color=colors[order])
-
+    ax.scatter(flat_pts[order, 0], flat_pts[order, 1], s=4, color=colors[order])
     return ax
 
 
@@ -272,7 +302,33 @@ def plot_clusters(
     return_fig: bool = False,
 ) -> tuple[plt.Figure, NDArray] | None:
     """
-    Display a cluster partition across up to 12 recursion steps.
+    Display a cluster partition across successive recursion depths.
+
+    The function starts from the provided cluster set and progressively
+    merges pairs of clusters to reconstruct coarser levels, then plots
+    each level side by side (up to 9 panels), with each cluster shown
+    in a distinct colour.
+
+    Parameters
+    ----------
+    clusters : ndarray of shape (N, k, D)
+        Output of `sample_clusters`. N must be a power of 2.
+        D can be 2 or 3; higher dimensions are projected to the first 3
+        coordinates via an isometric linear map before display.
+    axes : array of matplotlib Axes, optional
+        Pre-existing axes to draw into. If None, a new figure is created
+        with one subplot per recursion depth.
+    return_fig : bool, default False
+        If True, return ``(fig, axes)`` instead of calling ``plt.show()``.
+
+    Returns
+    -------
+    (fig, axes) if return_fig is True, else None.
+
+    Examples
+    --------
+    >>> cl = blue.sample_clusters(N=512, D=2)
+    >>> blue.plot_clusters(cl)
     """
     depth = int(np.log2(len(clusters)))
     n_plots = min(depth, 9)
@@ -282,7 +338,6 @@ def plot_clusters(
     if axes is None:
         fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
         axes = np.atleast_1d(axes).flatten()
-    
     else:
         fig = axes.get_figure()
 
@@ -300,17 +355,16 @@ def plot_clusters(
 
     if D >= 3:
         R = np.array([
-            [1, 1 / np.sqrt(3), -np.sqrt(2) / np.sqrt(3)],
+            [1,  1 / np.sqrt(3), -np.sqrt(2) / np.sqrt(3)],
             [-1, 1 / np.sqrt(3), -np.sqrt(2) / np.sqrt(3)],
-            [0, 2 / np.sqrt(3), np.sqrt(2) / np.sqrt(3)],
+            [0,  2 / np.sqrt(3),  np.sqrt(2) / np.sqrt(3)],
         ])
         clusters = np.einsum("ijk,kl->ijl", clusters, R)
 
     for k in reversed(range(n_plots)):
         show_clusters(axes[k], np.random.permutation(clusters))
-        axes[k].set_aspect('equal')
+        axes[k].set_aspect("equal")
         axes[k].axis("off")
-
         if k > 0:
             clusters = back_merge_clusters(clusters)
 
@@ -322,14 +376,46 @@ def plot_clusters(
     plt.show()
     return None
 
-def plot_polygons(polygons: NDArray, ax: plt.Axes | None = None, return_fig: bool = False):
+
+def plot_polygons(
+    polygons: NDArray,
+    ax: plt.Axes | None = None,
+    return_fig: bool = False,
+) -> tuple[plt.Figure, plt.Axes] | None:
     """
-    Visualize a collection of polygons, of shape (N, M, 2)
+    Visualise a collection of polygons with colour-coded faces.
+
+    Polygon opacity is scaled by inverse area squared, so tiny polygons
+    (e.g. deep in a Pinwheel tiling) remain visible while large ones are
+    rendered with full opacity.
+
+    Parameters
+    ----------
+    polygons : ndarray of shape (N, M, 2)
+        N polygons, each defined by M vertices in 2D.
+        Typical inputs:
+
+        - Output of `pinwheel_transform` — triangles of shape (T, 3, 2).
+        - Output of `sample_tessels` — quadrilaterals of shape (N, 4, 2).
+    ax : matplotlib Axes, optional
+        Existing axes to draw into. If None, a new figure is created.
+    return_fig : bool, default False
+        If True, return ``(fig, ax)`` instead of calling ``plt.show()``.
+
+    Returns
+    -------
+    (fig, ax) if return_fig is True, else None.
+
+    Examples
+    --------
+    >>> pw = blue.pinwheel_transform(blue.pinwheel_base(), depth=4)
+    >>> blue.plot_polygons(pw)
     """
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
     else:
         fig = ax.get_figure()
+
     n = len(polygons)
     cmap = plt.cm.YlGnBu
     color = cmap(0.2 + 0.8 * (np.random.permutation(np.arange(n)) / n))
@@ -338,24 +424,24 @@ def plot_polygons(polygons: NDArray, ax: plt.Axes | None = None, return_fig: boo
     y = polygons[:, :, 1]
     x_next = np.roll(x, -1, axis=1)
     y_next = np.roll(y, -1, axis=1)
-    areas_inv = 1/np.abs(0.5 * np.sum(x * y_next - x_next * y, axis=1))
-    areas_inv2 = (areas_inv)**2
-    areas_inv2 = (areas_inv2/areas_inv2.mean()+0.03).clip(max = 1.0)
+    areas_inv = 1 / np.abs(0.5 * np.sum(x * y_next - x_next * y, axis=1))
+    areas_inv2 = areas_inv**2
+    areas_inv2 = (areas_inv2 / areas_inv2.mean() + 0.03).clip(max=1.0)
 
-    
     collection = PolyCollection(
-        polygons, 
-        facecolors= color,
+        polygons,
+        facecolors=color,
         edgecolor="#FFFFFF",
         linewidth=1.2,
         alpha=areas_inv2,
     )
     ax.add_collection(collection)
-    ax.set_aspect('equal')
-    ax.axis('off')
-    
+    ax.set_aspect("equal")
+    ax.axis("off")
+
     plt.tight_layout()
-    
+
     if return_fig:
         return fig, ax
+
     plt.show()
