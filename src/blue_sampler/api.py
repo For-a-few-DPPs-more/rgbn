@@ -20,17 +20,19 @@ moment-matching problem
 from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
+from typing import Literal
 from .run.run_bruteforce import _bruteforce_pipeline
 from .run.run_recursive import _PRESETS, _recursive_pipeline
-from .warm_start import _sobol_warmstart
+from .run.run_nufft import _nufft_pipeline
+from .warm_start import _sobol_warmstart, _x_warmstart
 from .progress import ProgressLogger
 
 from .run.run_tessels import _tesselation
 from .run.run_clusters import _clusterisation
 
-from .pinwheels import BASE, subdivide, full_transform
+from .pinwheels import _BASE, _subdivide, _full_transform
 
-from .momentum.momentum import from_geometry
+from .momentum.momentum import _from_geometry
 
 from .viz import plot
 
@@ -50,8 +52,9 @@ def im2points(image = "anything.jpg", N = 100_000):
 def sample_points(
     N: int = 2**15,
     D: int = 2,
-    bruteforce: bool = False,
-    warmstart: str | NDArray | None = None,
+    lr: float = 1.0,
+    method: Literal["rgbn", "nufft", "bruteforce"] = "rgbn",
+    warmstart: Literal["Sobol", "Pinwheel"] | NDArray = None, 
     n_iter: int = 6,
     targets: NDArray | None = None,
     verbose: int = 1,
@@ -65,15 +68,19 @@ def sample_points(
         Number of output points.
     D : int
         Spatial dimension.
-    bruteforce : bool, default False
-        Use the bruteforce O(N^2) algorithm instead of the recursive one.
-        Gives a better sample but is intractable for N >= 50_000.
-        Automatically forced to True when N <= 2_000.
+    lr: learning rate (prefactor), used to scale internal learning rate
+    method : {"rgbn", "nufft", "bruteforce"}, default "rgbn"
+        Sampling method.
+        - "nufft": spectral loss non-uniform fast Fourier transform.
+        - "rgbn": spatial loss (truncated) based on recursive Gaussian Blue-Noise.
+        - "bruteforce":  exact GBN (no truncation, better but much slower).
     warmstart : {None, "Sobol", ndarray of shape (N, D)}, default None
         Initial point configuration.
         - None : default random/recursive initialisation.
         - "Sobol" : initialise with a Sobol low-discrepancy sequence
           (requires scipy.stats.qmc.Sobol).
+        - "Pinwheel" : initialise with the pinwheel method
+            (only for 2D), see pinwheel_transform
         - ndarray : use given points as the starting configuration.
     n_iter : int, default 6
         Number of solver iterations. Each iteration runs 10 gradient
@@ -90,23 +97,47 @@ def sample_points(
     -------
     points : ndarray of shape (N, D)
         The sampled point coordinates in [0, 1)^D.
+
+    Note
+    ----
+    bruteforce is automaticaly used for N <= 2_000 
+    as in that regime it is the best method from any
+    perspective.
     """
+    methods = ["rgbn", "bruteforce", "nufft"]
+    if not method in methods:
+        raise ValueError(f"unknown method {method}, must be one of {methods}")
+    bruteforce = method == "bruteforce" or N <= 2_000
+    nufft = method == "nufft"
+
     has_target = targets is not None
     if has_target:
+        if method == "nufft":
+            raise ValueError("a target was given but method nufft does'nt support a custom target")
         n_iter *= 2
 
-    if isinstance(warmstart, np.ndarray):
-        if warmstart.shape != (N, D):
-            raise ValueError(f"warmstart must have shape {(N, D)}, got {warmstart.shape}")
-        x = warmstart.copy()
-    elif warmstart is None:
+    if warmstart is None:
         x = None
-    elif warmstart == "Sobol":
-        x = _sobol_warmstart(N, D)
-    else:
-        raise ValueError(f"unsupported warmstart={warmstart!r}, expected None, a custom np.array or 'Sobol'")
-
-    use_bruteforce = bruteforce or N <= 2_000
+    else: 
+        lr /= 2
+        n_iter *= 2
+        if isinstance(warmstart, np.ndarray):
+            if warmstart.shape != (N, D):
+                raise ValueError(f"warmstart must have shape {(N, D)}, got {warmstart.shape}")
+            x = warmstart.copy()
+        elif warmstart == "Sobol":
+            x = _sobol_warmstart(N, D)
+        elif warmstart == "Pinwheel":
+            if D == 2:
+                x = _pinwheel_warmstart(N)
+            else:
+                print("[warmstart] pinwheel asked but D > 2...\n -> fallback to Sobol")
+        else:
+            raise ValueError(f"unsupported warmstart={warmstart!r}, expected None, a custom np.array, 'Sobol' or 'Pinwheel'")
+    
+    if nufft:
+        return _nufft_pipeline(N, D, lr = lr, warmstart = warmstart, 
+                               verbose = verbose, n_iter = 50*n_iter)
 
     if verbose >= 1:
         print(f"✦ {D}D blue-noise pipeline — sampling {N:,} points")
@@ -115,11 +146,12 @@ def sample_points(
         return x
 
     logger = ProgressLogger(D, verbose)
-    if use_bruteforce:
+    if bruteforce:
         ctx = logger.enter_level(N, D, 0)
         ctx.start()
         blue = _bruteforce_pipeline(
-            N, D, n_iter, ctx,
+            N, D, n_iter, ctx = ctx,
+            lr = lr,
             target=targets,
         )
         sampled_points  = np.array(blue(x))
@@ -134,8 +166,8 @@ def sample_points(
             logger=logger,
             S=preset["S"],
             expension_factor=preset["expension_factor"],
-            LR_spatial=preset["LR_spatial"],
-            LR_spectral=preset["LR_spectral"],
+            LR_spatial=lr * preset["LR_spatial"],
+            LR_spectral=lr * preset["LR_spectral"],
             spatial_radius=preset["spatial_radius"],
             spectral_radius=preset["spectral_radius"],
             N_PER_STEP=10,
@@ -323,7 +355,7 @@ def cluster2points(clusters: NDArray, p: int = 3) -> NDArray:
     ndarray of shape (N, m, D)
         m points per tessel or cluster, matching its moments up to order p.
     """
-    return from_geometry(clusters, "clusters", p)
+    return _from_geometry(clusters, "clusters", p)
 
 def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
     """
@@ -348,7 +380,7 @@ def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
     ndarray of shape (N, m, 2)
         m points per tessel or cluster, matching its moments up to order p.
     """
-    return from_geometry(tessels, "polygons", p)
+    return _from_geometry(tessels, "polygons", p)
 
 def sobol(N:int = 2**15, D:int = 2):
     """
@@ -378,7 +410,7 @@ def pinwheel_base():
     """
     Returns the base Conway triangle for pinwheel aperiodic tiling
     """
-    return BASE.copy()
+    return _BASE.copy()
 
 def pinwheel_transform(
     points: NDArray = pinwheel_base(), 
@@ -419,11 +451,11 @@ def pinwheel_transform(
     """
     tiling = pinwheel_base()[None]
     for _ in range(depth):  
-        tiling = subdivide(tiling)
+        tiling = _subdivide(tiling)
 
     tiling = np.concatenate([tiling, -tiling + np.array([[2.0, 1.0]])], axis = 0)
     tiling = np.concatenate([tiling, tiling* np.array([[-1.0, 1.0]]) + np.array([[2.0, 1.0]])], axis = 0)
-    M, t = full_transform(pinwheel_base(), tiling/2.0)
+    M, t = _full_transform(pinwheel_base(), tiling/2.0)
 
     if points.ndim == 1:
         points = np.einsum('nij,j-> ni', M, points) + t
@@ -432,3 +464,14 @@ def pinwheel_transform(
     else:
         points = np.einsum('nij,nkj->nki', M, points) + t[:, None, :]
     return points
+
+def _pinwheel_warmstart(N):
+    """
+    simple wrapper upon tessel2points + pinwheel_transform to sample exactly N points
+    only for 2D
+    """
+    xbase = tessel2points(pinwheel_base(), p = 3) #(3, 2)
+    depth = int(np.log(N/3)/np.log(5) + 1)
+    intensity = (3*4*5**depth)
+    x = pinwheel_transform(xbase, depth = depth) #(4*depth**5, 3, 2)
+    return _x_warmstart(x, N, intensity = intensity) #(N, 2)

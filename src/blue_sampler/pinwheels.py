@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-BASE = np.array([[0.,0.],[2.,0.],[0.,1.]])
+_BASE = np.array([[0.,0.],[2.,0.],[0.,1.]])
 
 def step_transform():
     return [
@@ -12,14 +12,14 @@ def step_transform():
         (np.array([[-2,-1],[ 1,-2]])/5,  np.array([6/5, 2/5])),  # T5 
     ]
 
-def subdivide(triangles):
+def _subdivide(triangles):
     """(N,3,2) → (5N,3,2)"""
     result = []
     for M, t in step_transform():
         result.append(np.einsum('ij,nkj->nki', M, triangles) + t)
     return np.concatenate(result, axis=0)
 
-def full_transform(pinwheel_base, tiling):
+def _full_transform(pinwheel_base, tiling):
     pinwheel_base   = np.asarray(pinwheel_base,   dtype=float)
     tiling = np.asarray(tiling, dtype=float)
     if pinwheel_base.ndim == 2:

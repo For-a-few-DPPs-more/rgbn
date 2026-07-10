@@ -24,7 +24,8 @@ def _bruteforce_pipeline(
     N: int,
     D: int,
     n_iter: int,
-    ctx: _LevelCtx,
+    lr: float = 1.0,
+    ctx: _LevelCtx | None = None,
     target=None,
 ):
     """bruteforce (complexity O(N2)) gradient-descent sampler for N ≤ ~3 000 points.
@@ -41,7 +42,7 @@ def _bruteforce_pipeline(
     high_D = sigma2 >= 0.03
 
     lr_table = {2: 0.4, 3: 0.1, 4: 0.05, 5: 0.01}
-    lr    = lr_table.get(D, 0.001) / S
+    lr    = lr * lr_table.get(D, 0.001) / S
     Niter = 50*n_iter if high_D else 100*n_iter
 
     if high_D:
@@ -86,12 +87,14 @@ def _bruteforce_pipeline(
 
 
     def sample_fn(init: np.ndarray | None = None) -> jnp.ndarray:
-        ctx.on_bruteforce_start(eta_seconds = eta())
+        if ctx is not None:
+            ctx.on_bruteforce_start(eta_seconds = eta())
         if init is None:
             init = np.random.rand(N, D)
         out = _run(jnp.asarray(init))
         out.block_until_ready()
-        ctx.on_bruteforce_done()
+        if ctx is not None:
+            ctx.on_bruteforce_done()
         return out
 
     return sample_fn

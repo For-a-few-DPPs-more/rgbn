@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name        = "blue_sampler"
-version     = "1.1.0"
-description = "Large points sampling on the unit torus [0, 1)^D, either with uniform blue noise propriety (vanishing density fluctuations) or with target density (stippling)"
+version     = "1.2.0"
+description = "Stealthy point-pattern sampling on the unit torus"
 readme      = "README.md"
 license     = { text = "MIT" }
 requires-python = ">=3.9"
@@ -15,24 +15,19 @@ keywords = [
     "stealthy",
     "point process",
     "sampling",
-    "structure_factor",
-    "stippling"
 ]
 
 dependencies = [
     "numpy",
     "jax",
     "jaxlib",
+    "optax",
     "matplotlib",
-    "squarenet",
+    "squarenet >= 1.3",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/For-a-few-DPPs-more/rgbn"
-"Source" = "https://github.com/For-a-few-DPPs-more/rgbn"
-"Documentation" = "https://blue-sampler.readthedocs.io"
-"Colab"  = "https://colab.research.google.com/github.com/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb"
-PyPI = "https://pypi.org/project/blue_sampler/"
+Repository = "https://github.com/For-a-few-DPPs-more/rgbn"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/blue_sampler"]

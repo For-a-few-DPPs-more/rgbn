@@ -184,7 +184,7 @@ def _recursive_pipeline(
             if bruteforce:
                 ctx.start()
                 x_pts = _bruteforce_pipeline(
-                    N, D, N_ITER, ctx, 
+                    N, D, N_ITER, ctx = ctx, 
                     target=target, 
                 )(x)
                 x_pts   = prepare_points(np.asarray(x_pts), N, IJK, D)
@@ -215,7 +215,7 @@ def _recursive_pipeline(
             ctx.start()
             if bruteforce:
                 x_pts = _bruteforce_pipeline(
-                    N, D, N_ITER, ctx, 
+                    N, D, N_ITER, ctx = ctx, 
                     target=target, 
                 )(xparent)
             else:
