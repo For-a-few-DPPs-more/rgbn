@@ -29,8 +29,8 @@ pip install blue-sampler
 ```python
 import blue_sampler as blue
 
-# Generate 10,000 blue-noise points
-x = blue.sample_points(N=10_000, D=2, method="rgbn")  # or method="nufft"
+# Generate 10,000 2D blue-noise points
+x = blue.sample_points(N=10_000, D=2)  
 blue.plot(x)
 
 # Structure factor
