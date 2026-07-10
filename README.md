@@ -5,18 +5,18 @@
 
 # blue-sampler
 
-Generate large **stealthy point patterns** on the unit torus $[0, 1)^D$.  
-Stealthy point patterns have vanishing density fluctuations at low frequencies, making them ideal for Monte Carlo integration, image stippling, and any application requiring well-distributed, low-discrepancy points.
+**Generate large stealthy point patterns** on the unit torus $[0, 1)^D$. 📐
 
-The main blue-noise samplers (**RGBN** and **NUFFT**) have **linear** complexity in both the number of points and the dimension.  
-They generate e.g. 1 million 2D points in under 15 minutes on a standard CPU, and up to 30× faster on GPU.
+Stealthy point patterns exhibit vanishing density fluctuations at low frequencies, making them particularly suited for **Monte Carlo integration** 🎯, **image stippling**, and any application requiring well-distributed, low-discrepancy points. 
 
-Note:
-Most implemented methods support adaptive sampling from a target distribution by passing an array of points (sampled i.i.d. from the desired distribution) to the `target` argument.
+The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in both the number of points and the dimension. ⚡  
+They can generate e.g. 1 million 2D points in under 15 minutes on a standard CPU, and up to 30× faster on GPU. 
+
+> **Note**: Most implemented methods support adaptive sampling from a target distribution by passing an array of points (sampled i.i.d. from the desired distribution) to the `target` argument.
 
 ---
 
-## Installation
+## 📦 Installation
 
 ```bash
 pip install blue-sampler
@@ -30,19 +30,19 @@ pip install blue-sampler
 import blue_sampler as blue
 
 # Generate 10,000 2D blue-noise points
-x = blue.sample_points(N=10_000, D=2)  
-blue.plot(x)
+x = blue.sample_points(N=10_000, D=2)
+blue.plot(x) 📈
 
 # Structure factor
-blue.plot_structure_factor(x)
+blue.plot_structure_factor(x) 📊
 
 # Image stippling
-x = blue.im2points("zebra.jpg")
+x = blue.im2points("zebra.jpg") 🖼️
 ```
 
 ---
 
-## Example
+## 🖼️ Example
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/zebrapoints.png" width="650" alt="Blue noise stippling example">
@@ -50,7 +50,7 @@ x = blue.im2points("zebra.jpg")
 
 ---
 
-## Available Samplers
+## 📋 Available Samplers
 
 ### Main sampling methods
 
@@ -58,11 +58,11 @@ x = blue.im2points("zebra.jpg")
 x = blue.sample_points(N, D, method="rgbn")
 ```
 
-| Method       | Description                              |
-|--------------|------------------------------------------|
-| `rgbn`       | Recursive Green-Blue Noise               |
-| `nufft`      | Non-Uniform Fast Fourier Transform       |
-| `bruteforce` | Base GBN sampler (best quality, slower)  |
+| Method         | Description                              |
+|----------------|------------------------------------------|
+| `rgbn`         | Recursive Green-Blue Noise 🔄            |
+| `nufft`        | Non-Uniform Fast Fourier Transform 📉    |
+| `bruteforce`   | Base GBN sampler (best quality, slower)  |
 
 ---
 
@@ -73,15 +73,14 @@ x = blue.sample_points(N, D, method="rgbn")
 ```python
 x = blue.sobol(N, D)
 ```
-
-Low-discrepancy quasi-random sequence.
+Low-discrepancy quasi-random sequence. 📏
 
 ### STIT Tessellations
 
 ```python
 # Raw STIT tessellation
 ts = blue.sample_tessels(N, D)
-blue.plot_tessels(ts)
+blue.plot_tessels(ts) 🧩
 
 # Convert to point set
 x = blue.tessel2points(ts)
@@ -91,8 +90,8 @@ x = blue.tessel2points(ts)
 
 ```python
 # Raw clusters
-cl = blue.sample_clusters(N, D)  # clusters from a target (default Sobol sequence)
-blue.plot_clusters(cl)
+cl = blue.sample_clusters(N, D)
+blue.plot_clusters(cl) 🔗
 
 # Convert to point set
 x = blue.cluster2points(cl)
@@ -106,27 +105,27 @@ pw0 = blue.pinwheel_base()
 
 # Triangulation level 4
 pw4 = blue.pinwheel_transform(pw0, depth=4)
-blue.plot_polygons(pw4)
+blue.plot_polygons(pw4) 🔺
 
 # Convert Pinwheel to point set
 x = blue.pinwheel_transform(blue.tessel2points(pw0))
 ```
 
-**Note:**  
-The conversion from geometric objects (polygons or clusters) to point sets is performed using a standard **moment matching** technique.
+> **Note**: The conversion from geometric objects (polygons or clusters) to point sets is performed using a standard **moment matching** technique.
+
 ---
 
 ## Supported Dimensions
 
 | Dimension | Status       |
 |-----------|--------------|
-| 2–3D      | Fast         |
+| 2–3D      | Fast ⚡       |
 | 4–5D      | Supported    |
-| ≥6D       | Experimental |
+| ≥6D       | Experimental 🧪 |
 
 ---
 
-## Documentation & Links
+## Documentation & Links 🔗
 
 - 📖 **Documentation**: [https://blue-sampler.readthedocs.io](https://blue-sampler.readthedocs.io)
 - 📦 **PyPI**: [https://pypi.org/project/blue-sampler](https://pypi.org/project/blue-sampler/)
@@ -135,61 +134,39 @@ The conversion from geometric objects (polygons or clusters) to point sets is pe
 
 ---
 
-## References
+## 📚 References
 
 The algorithms and mathematical tools implemented in **blue-sampler** are based or inspired from the following works.
 
-- **Gaussian Blue Noise**
-
-  *A. G. M. Ahmed, J. Ren, and P. Wonka.*
-  **Gaussian Blue Noise.**
-  *ACM Transactions on Graphics (SIGGRAPH Asia), 41(6), 2022.*
+- **Gaussian Blue Noise**  
+  *A. G. M. Ahmed, J. Ren, and P. Wonka.*  
+  **Gaussian Blue Noise.**  
+  *ACM Transactions on Graphics (SIGGRAPH Asia), 41(6), 2022.*  
   DOI: 10.1145/3550454.3555519
 
-  Gaussian kernel to sample blue noise from repulsive interacting particles
+- **FReSCo (NUFFT sampler)**  
+  *A. Shih, M. Casiulis, and S. Martiniani.*  
+  **Fast Generation of Spectrally-Shaped Disorder.**  
+  *Physical Review E*, 110(3):034122, 2024.  
+  DOI: 10.1103/PhysRevE.110.034122
 
-
-- **FReSCo (NUFFT sampler)**
-
-  *A. Shih, M. Casiulis, and S. Martiniani.*
-  **Fast Generation of Spectrally-Shaped Disorder.**
-  *Physical Review E*, 110(3):034122, 2024.
-  DOI: 10.1103/PhysRevE.110.034122 — https://github.com/martiniani-lab/FReSCo
-
-  NUFFT-based optimization strategy (via FINUFFT) for spectrally shaped point patterns
-
-- **STIT tessellations and moment matching**
-
-  *L. Lotz and M. A. Klatt.*
-  **Persistence of asymptotic variance under transport: from hyperfluctuation to stealthy hyperuniformity.**
+- **STIT tessellations and moment matching**  
+  *L. Lotz and M. A. Klatt.*  
+  **Persistence of asymptotic variance under transport: from hyperfluctuation to stealthy hyperuniformity.**  
   *arXiv:2605.22803*, 2026.
 
-  Introduces the fair STIT tessellation construction and the moment-matching procedure used to convert a random geometric 
-  structure to a point patterns.
-
-- **Pinwheel**
-
-  *S. Torquato and F. H. Stillinger.*
-  **Local density fluctuations, hyperuniformity, and order metrics.**
+- **Pinwheel**  
+  *S. Torquato and F. H. Stillinger.*  
+  **Local density fluctuations, hyperuniformity, and order metrics.**  
   *Physical Review E*, 68(4):041113, 2003.
-  DOI: 10.1103/PhysRevE.68.041113
 
-  Background on hyperuniform systems and the relation between aperiodic tilings (including Pinwheels) and hyperuniformity.
-
-- **SquareNet**
-
-  *A. de Cacqueray.*
+- **SquareNet**  
+  *A. de Cacqueray.*  
   **SquareNet** (v0.1.0). 2026.
-  https://squarenet.readthedocs.io/en/latest/
 
-  Grid-based spatial data structure used for efficient neighborhood queries and fourier transform. Maps unstructured point clouds to structured grids via a bijective transformation, replacing expensive k-NN and radius searches with plain tensor indexing.
-
-- **Sobol sequences**
-
+- **Sobol sequences**  
   Wrapped from `scipy.stats.qmc.Sobol` (SciPy).
-  https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
 
-  Classical low-discrepancy sequence implemented as `blue.sobol`.
 ---
 
 ## License
