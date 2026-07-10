@@ -7,7 +7,7 @@
 
 **Generate large stealthy point patterns** on the unit torus $[0, 1)^D$. 📐
 
-Stealthy point patterns exhibit vanishing density fluctuations at low frequencies, making them particularly suited for **Monte Carlo integration** 🎯, **image stippling**, and any application requiring well-distributed, low-discrepancy points. 
+Stealthy point patterns exhibit vanishing density fluctuations at low frequencies, making them particularly suited for **Monte Carlo** integration 🎯, **image stippling**, and any application requiring well-distributed, low-discrepancy points. 
 
 The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in both the number of points and the dimension. ⚡  
 They can generate e.g. 1 million 2D points in under 15 minutes on a standard CPU, and up to 30× faster on GPU. 
@@ -101,7 +101,7 @@ x = blue.cluster2points(cl)
 
 ```python
 # Base pinwheel triangle
-pw0 = blue.pinwheel_base()
+pw0 = blue.pinwheel_base() 𖣘
 
 # Triangulation level 4
 pw4 = blue.pinwheel_transform(pw0, depth=4)
@@ -138,13 +138,13 @@ x = blue.pinwheel_transform(blue.tessel2points(pw0))
 
 The algorithms and mathematical tools implemented in **blue-sampler** are based or inspired from the following works.
 
-- **Gaussian Blue Noise**  
+- **Gaussian Blue Noise (repulsive interaction kernel)**  
   *A. G. M. Ahmed, J. Ren, and P. Wonka.*  
   **Gaussian Blue Noise.**  
   *ACM Transactions on Graphics (SIGGRAPH Asia), 41(6), 2022.*  
   DOI: 10.1145/3550454.3555519
 
-- **FReSCo (NUFFT sampler)**  
+- **FReSCo (Non uniform FFT)**  
   *A. Shih, M. Casiulis, and S. Martiniani.*  
   **Fast Generation of Spectrally-Shaped Disorder.**  
   *Physical Review E*, 110(3):034122, 2024.  
@@ -155,14 +155,15 @@ The algorithms and mathematical tools implemented in **blue-sampler** are based 
   **Persistence of asymptotic variance under transport: from hyperfluctuation to stealthy hyperuniformity.**  
   *arXiv:2605.22803*, 2026.
 
-- **Pinwheel**  
+- **Aperiodic tiling for hyuperuniformity (here pinwheel)**  
   *S. Torquato and F. H. Stillinger.*  
   **Local density fluctuations, hyperuniformity, and order metrics.**  
   *Physical Review E*, 68(4):041113, 2003.
 
-- **SquareNet**  
-  *A. de Cacqueray.*  
-  **SquareNet** (v0.1.0). 2026.
+- **SquareNet — Grid data structure for point clouds**
+    SquareNet [(v1.3.11). 2026](https://squarenet.readthedocs.io/en/latest/).
+    Joint repository codeveloped with RGBN for efficient neighbor queries and Fourier transforms in Python.
+    Documentation
 
 - **Sobol sequences**  
   Wrapped from `scipy.stats.qmc.Sobol` (SciPy).
