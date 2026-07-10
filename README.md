@@ -55,13 +55,13 @@ x = blue.im2points("zebra.jpg") 🖼️
 ### Main sampling methods
 
 ```python
-x = blue.sample_points(N, D, method="rgbn")
+x = blue.sample_points(N, D, method="rgbn") #(N, D)
 ```
 
 | Method         | Description                              |
 |----------------|------------------------------------------|
-| `rgbn`         | Recursive Gaussian-Blue Noise 🔄            |
-| `nufft`        | Non-Uniform Fast Fourier Transform 📉    |
+| `rgbn`         | Recursive Gaussian-Blue Noise 🔄         |
+| `nufft`        | Non-Uniform Fast Fourier Transform 📈    |
 | `bruteforce`   | Base GBN sampler (best quality, slower)  |
 
 ---
@@ -71,47 +71,53 @@ x = blue.sample_points(N, D, method="rgbn")
 ### Sobol sequence
 
 ```python
-x = blue.sobol(N, D)
+x = blue.sobol(N, D) #(N, D)
 ```
 Low-discrepancy quasi-random sequence. 📏
 
 ### STIT Tessellations
 
 ```python
-# Raw STIT tessellation
-ts = blue.sample_tessels(N, D)
+# Raw STIT tessellation (quadrilaterals)
+ts = blue.sample_tessels(N, D) #(N, 4, 2)
 blue.plot_tessels(ts) 🧩
 
 # Convert to point set
-x = blue.tessel2points(ts)
+x = blue.tessel2points(ts) #(N, m, 2)
 ```
 
 ### Clusters
 
 ```python
 # Raw clusters
-cl = blue.sample_clusters(N, D)
+cl = blue.sample_clusters(N, D) #(N, K, 2)
 blue.plot_clusters(cl) 🔗
 
 # Convert to point set
-x = blue.cluster2points(cl)
+x = blue.cluster2points(cl) #(N, m, 2)
 ```
 
 ### Pinwheel Tilings
 
 ```python
 # Base pinwheel triangle
-pw0 = blue.pinwheel_base() 𖣘
+pw0 = blue.pinwheel_base() 𖣘 #(3, 2)
 
 # Triangulation level 4
-pw4 = blue.pinwheel_transform(pw0, depth=4)
+pw4 = blue.pinwheel_transform(pw0, depth=4) #(4*5**depth, 3, 2)
 blue.plot_polygons(pw4) 🔺
 
-# Convert Pinwheel to point set
-x = blue.pinwheel_transform(blue.tessel2points(pw0))
+#===============================
+# Convert Pinwheel to point set:
+#===============================
+#sample points from the BASE pinwheel
+x0 = blue.tessel2points(pw0) #(m, 2)
+#then replicate the sample on the full triangulation,
+#in a fractal way
+x4 = blue.pinwheel_transform(x0) #(4*5**depth, m, 2)
 ```
 
-> **Note**: The conversion from geometric objects (polygons or clusters) to point sets is performed using a standard **moment matching** technique.
+> **Note**: The conversion from geometric objects (polygons or clusters) to point sets is performed using a standard **moment matching** technique. cluster2points(x, p = 3) and tessel2points(x, p = 3) will sample m points per batch that mimic the statistical {0, 1, ... p-1} moments of the batch.
 
 ---
 

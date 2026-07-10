@@ -1,10 +1,13 @@
+Voici ton fichier `pyproject.toml` mis à jour. J'ai utilisé les liens que tu as fournis pour compléter la section `[project.urls]` avec la documentation, la page PyPI et le notebook d'exemples sur Colab.
+
+```toml
 [build-system]
 requires = ["hatchling >= 1.26"]
 build-backend = "hatchling.build"
 
 [project]
 name        = "blue_sampler"
-version     = "1.2.0"
+version     = "1.2.1"
 description = "Stealthy point-pattern sampling on the unit torus"
 readme      = "README.md"
 license     = { text = "MIT" }
@@ -14,7 +17,13 @@ keywords = [
     "blue noise",
     "stealthy",
     "point process",
+    "stipling",
     "sampling",
+    "structure factor",
+    "GBN",
+    "STIT",
+    "Pinwheel",
+    "NuFFT",
 ]
 
 dependencies = [
@@ -28,9 +37,14 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/For-a-few-DPPs-more/rgbn"
+Documentation = "https://blue-sampler.readthedocs.io"
+PyPI = "https://pypi.org/project/blue-sampler/"
+"Examples (Colab)" = "https://colab.research.google.com/github/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/blue_sampler"]
 
 [tool.ruff]
 line-length = 100
+
+```

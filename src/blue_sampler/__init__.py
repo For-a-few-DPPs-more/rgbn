@@ -8,11 +8,22 @@ samples on the unit torus [0, 1)^D.
 Quick start
 -----------
 >>> import blue_sampler as blue
->>> x = blue.sample(N=10_000, D=2)          # (10000, 2) array
+>>> x = blue.sample_points(N=10_000, D=2)   # (10000, 2) array
 >>> blue.plot(x)
 >>> blue.plot_structure_factor(x)
 """
-from .api import im2points, tessel2points, cluster2points, sample_points, sample_tessels, sample_clusters, sobol, pinwheel_base, pinwheel_transform, tile
+from .api import (
+    im2points,
+    tessel2points,
+    cluster2points,
+    sample_points,
+    sample_tessels,
+    sample_clusters,
+    sobol,
+    pinwheel_base,
+    pinwheel_transform,
+    tile,
+)
 from .viz import plot, plot_structure_factor, plot_tessels, plot_clusters, plot_polygons
 from .math import structure_factor
 from .datasets import generate_dataset
@@ -37,4 +48,4 @@ __all__ = [
     "tile",
 ]
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"

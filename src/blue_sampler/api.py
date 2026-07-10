@@ -7,20 +7,24 @@ periodic unit hypercube [0, 1)^D with sub-Poisson density fluctuations
 (so-called blue noise).
 
 The package also exposes utilities to sample tessellations (2D only) and
-balanced clusters (arbitrary dimension). 
-tessels or clusters are sampled with following balance property: 
-uniform area repartition if no target is given or uniform atoms repartition if
-target atoms are given.
+balanced clusters (arbitrary dimension).
+Tessels or clusters are sampled with the following balance property:
+uniform area repartition if no target is given, or uniform atom repartition
+if target atoms are given.
 
 Clusters and tessellations can subsequently be converted into low-discrepancy
-point sets using `blue.from_geometry' which internally solves a 
-moment-matching problem
+point sets using `tessel2points` / `cluster2points`, which internally solve a
+moment-matching problem.
 """
 
 from __future__ import annotations
+
+import warnings
+
 import numpy as np
 from numpy.typing import NDArray
 from typing import Literal
+
 from .run.run_bruteforce import _bruteforce_pipeline
 from .run.run_recursive import _PRESETS, _recursive_pipeline
 from .run.run_nufft import _nufft_pipeline
@@ -36,25 +40,37 @@ from .momentum.momentum import _from_geometry
 
 from .viz import plot
 
-def im2points(image = "anything.jpg", N = 100_000):
-    """
-    simple wrapper for image stippling
 
-    Return
-    ------
-    points : ndarray of shape (N, D)
-        The sampled point coordinates in [0, 1)^D.
+def im2points(image: str = "anything.jpg", N: int = 100_000) -> NDArray:
     """
-    points = sample_points(N = N, D = 2, targets = image)
-    plot(points, figsize = (10, 10))
+    Image stippling: distribute N blue-noise points according to image brightness.
+
+    A convenience wrapper around `sample_points` that reads an image file and
+    uses its luminance as a target density, then plots the result.
+
+    Parameters
+    ----------
+    image : str, default "anything.jpg"
+        Path to the input image (any format supported by matplotlib/PIL).
+    N : int, default 100_000
+        Number of output points.
+
+    Returns
+    -------
+    points : ndarray of shape (N, 2)
+        The sampled point coordinates in [0, 1)^2.
+    """
+    points = sample_points(N=N, D=2, targets=image)
+    plot(points, figsize=(10, 10))
     return points
+
 
 def sample_points(
     N: int = 2**15,
     D: int = 2,
     lr: float = 1.0,
     method: Literal["rgbn", "nufft", "bruteforce"] = "rgbn",
-    warmstart: Literal["Sobol", "Pinwheel"] | NDArray = None, 
+    warmstart: Literal["Sobol", "Pinwheel"] | NDArray = None,
     n_iter: int = 6,
     targets: NDArray | None = None,
     verbose: int = 1,
@@ -64,66 +80,83 @@ def sample_points(
 
     Parameters
     ----------
-    N : int
+    N : int, default 32768
         Number of output points.
-    D : int
-        Spatial dimension.
-    lr: learning rate (prefactor), used to scale internal learning rate
+    D : int, default 2
+        Spatial dimension. Fast for D=2–3, supported for D=4–5,
+        experimental for D≥6.
+    lr : float, default 1.0
+        Global learning-rate multiplier applied to all internal step sizes.
+        Values above 1.0 converge faster but may overshoot and produce
+        less uniform patterns. Values below 1.0 slow convergence but can
+        improve final quality. The default of 1.0 works well in most cases;
+        only tune this if you have a specific speed/quality trade-off in mind.
     method : {"rgbn", "nufft", "bruteforce"}, default "rgbn"
-        Sampling method.
-        - "nufft": spectral loss non-uniform fast Fourier transform.
-        - "rgbn": spatial loss (truncated) based on recursive Gaussian Blue-Noise.
-        - "bruteforce":  exact GBN (no truncation, better but much slower).
-    warmstart : {None, "Sobol", ndarray of shape (N, D)}, default None
-        Initial point configuration.
-        - None : default random/recursive initialisation.
-        - "Sobol" : initialise with a Sobol low-discrepancy sequence
-          (requires scipy.stats.qmc.Sobol).
-        - "Pinwheel" : initialise with the pinwheel method
-            (only for 2D), see pinwheel_transform
-        - ndarray : use given points as the starting configuration.
+        Sampling algorithm:
+
+        - ``"rgbn"``       — Recursive Gaussian Blue-Noise. Spatial loss,
+          truncated neighbourhood. Linear complexity, recommended for most uses.
+        - ``"nufft"``      — Non-Uniform Fast Fourier Transform. Spectral loss.
+          Good alternative for 2D; does **not** support a ``targets`` density.
+        - ``"bruteforce"`` — Exact GBN with no truncation. Best quality but
+          O(N²) cost. Automatically selected when N ≤ 2 000.
+    warmstart : {None, "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
+        Initial point configuration before optimisation:
+
+        - ``None``        — default random / recursive initialisation.
+        - ``"Sobol"``     — initialise with a Sobol low-discrepancy sequence
+          (requires ``scipy``). Recommended when N is a power of 2.
+        - ``"Pinwheel"``  — initialise with a pinwheel aperiodic tiling
+          (2D only). Falls back to Sobol for D > 2.
+        - ndarray         — use the provided array as the starting configuration.
     n_iter : int, default 6
-        Number of solver iterations. Each iteration runs 10 gradient
-        steps plus a structural gridification step (neighbor lookup).
-        More iterations = better quality but slower.
-    targets : ndarray of shape (K, D), optional
-        Atoms describing a target density.
-        can also be a path to an image, e.g. targets = "zebra.jpg"
-  
+        Number of solver iterations. Each iteration runs 10 gradient steps
+        plus one structural gridification step (neighbour lookup).
+        More iterations yield better quality at the cost of runtime.
+    targets : ndarray of shape (K, D) or str, optional
+        Atoms describing a target density for adaptive sampling.
+        Can also be a path to an image file, e.g. ``targets="zebra.jpg"``.
+        Not supported with ``method="nufft"``.
     verbose : int, default 1
-        0 = silent, 1 = live progress.
+        Verbosity level: ``0`` = silent, ``1`` = live progress bar with ETA.
 
     Returns
     -------
     points : ndarray of shape (N, D)
         The sampled point coordinates in [0, 1)^D.
 
-    Note
-    ----
-    bruteforce is automaticaly used for N <= 2_000 
-    as in that regime it is the best method from any
-    perspective.
+    Notes
+    -----
+    ``bruteforce`` is automatically used for N ≤ 2 000, regardless of the
+    ``method`` argument, as it is optimal in that regime.
     """
     methods = ["rgbn", "bruteforce", "nufft"]
-    if not method in methods:
-        raise ValueError(f"unknown method {method}, must be one of {methods}")
+    if method not in methods:
+        raise ValueError(f"unknown method {method!r}, must be one of {methods}")
+
     bruteforce = method == "bruteforce" or N <= 2_000
     nufft = method == "nufft"
 
     has_target = targets is not None
     if has_target:
         if method == "nufft":
-            raise ValueError("a target was given but method nufft does'nt support a custom target")
+            raise ValueError(
+                "a target density was given but method 'nufft' does not support "
+                "a custom target; use method='rgbn' or method='bruteforce' instead."
+            )
         n_iter *= 2
 
+    x = None
     if warmstart is None:
-        x = None
-    else: 
+        pass  # x stays None → random init inside the pipeline
+    else:
         lr /= 2
         n_iter *= 2
         if isinstance(warmstart, np.ndarray):
             if warmstart.shape != (N, D):
-                raise ValueError(f"warmstart must have shape {(N, D)}, got {warmstart.shape}")
+                raise ValueError(
+                    f"warmstart array must have shape {(N, D)}, got {warmstart.shape}"
+                )
             x = warmstart.copy()
         elif warmstart == "Sobol":
             x = _sobol_warmstart(N, D)
@@ -131,13 +164,22 @@ def sample_points(
             if D == 2:
                 x = _pinwheel_warmstart(N)
             else:
-                print("[warmstart] pinwheel asked but D > 2...\n -> fallback to Sobol")
+                warnings.warn(
+                    f"warmstart='Pinwheel' is only supported for D=2 (got D={D}); "
+                    "falling back to Sobol initialisation.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                x = _sobol_warmstart(N, D)
         else:
-            raise ValueError(f"unsupported warmstart={warmstart!r}, expected None, a custom np.array, 'Sobol' or 'Pinwheel'")
-    
+            raise ValueError(
+                f"unsupported warmstart={warmstart!r}; expected None, "
+                "'Sobol', 'Pinwheel', or an ndarray of shape (N, D)."
+            )
+
     if nufft:
-        return _nufft_pipeline(N, D, lr = lr, warmstart = warmstart, 
-                               verbose = verbose, n_iter = 50*n_iter)
+        return _nufft_pipeline(N, D, lr=lr, warmstart=warmstart,
+                               verbose=verbose, n_iter=50 * n_iter)
 
     if verbose >= 1:
         print(f"✦ {D}D blue-noise pipeline — sampling {N:,} points")
@@ -150,13 +192,12 @@ def sample_points(
         ctx = logger.enter_level(N, D, 0)
         ctx.start()
         blue = _bruteforce_pipeline(
-            N, D, n_iter, ctx = ctx,
-            lr = lr,
+            N, D, n_iter, ctx=ctx,
+            lr=lr,
             target=targets,
         )
-        sampled_points  = np.array(blue(x))
+        sampled_points = np.array(blue(x))
         logger.exit_level()
-    
     else:
         preset = _PRESETS[min(D, 5)]
         sampled_points = _recursive_pipeline(
@@ -176,9 +217,10 @@ def sample_points(
         )
 
     if verbose >= 1:
-        print("Done - To see result: blue.plot(x)")
+        print("Done — visualise with blue.plot(x)")
 
     return sampled_points
+
 
 def sample_tessels(
     N: int = 2**15,
@@ -187,49 +229,71 @@ def sample_tessels(
     return_atoms: bool = False,
 ) -> NDArray | tuple[NDArray, NDArray]:
     """
-    Recursively split the unit square into N random quadrilaterals.
+    Recursively split the unit square into N random quadrilaterals (2D only).
 
-    If `targets` is None, splits are computed to achieve equal areas.
-    If `targets` is provided, splits are computed to achieve a median
-    separation of the atoms.
+    If ``targets`` is None, splits are chosen to achieve equal areas.
+    If ``targets`` is provided, splits are chosen to achieve a balanced
+    median separation of the atoms.
 
     Parameters
     ----------
-    N : int, default 1024
-        Number of final tessels. Must be a power of 2.
+    N : int, default 32768
+        Number of output quadrilaterals. **Must be a power of 2.**
+    D : int = 2
+        STIT tesselation is ONLY for 2D, the D argument is only 
+        for consistancy with other methods.
     targets : ndarray of shape (K, 2), optional
-        Coordinates of atoms to split, in the [0, 1)^2 unit box.
-        K must be a multiple of N. The more targets provided, the better
+        Coordinates of atoms to split, in the [0, 1)² unit box.
+        K must be a multiple of N. The more targets provided the better
         the approximation, but the slower the computation
-        (K/N should be at least 100 for a decent tessellation).
-        A typical use case is adaptive tessellation, e.g. with `targets`
+        (K/N ≥ 100 is recommended for a decent tessellation).
+        A typical use case is adaptive tessellation, e.g. with ``targets``
         being i.i.d. points sampled from a target density.
+    return_atoms : bool, default False
+        If True and ``targets`` is provided, also return the atoms
+        redistributed among their final quadrilateral.
 
     Returns
     -------
     quad : ndarray of shape (N, 4, 2)
-        A tessellation composed of N quadrilaterals with equal area
-        or equal number of atoms.
-    atoms : ndarray of shape (N, K/N, 2)
-        The input target atoms, redistributed among their final quadrilateral.
-        Only returned if `targets` was provided and return_atoms is set to True.
+        A tessellation of N quadrilaterals with equal area (or equal atom count).
+    atoms : ndarray of shape (N, K//N, 2)
+        The input target atoms, redistributed among their quadrilateral.
+        Only returned when ``targets`` is provided **and** ``return_atoms=True``.
 
     Notes
     -----
-    Only supports 2D geometry and a power-of-two number of tessels (N).
+    Only 2D geometry is supported. N must be a power of 2 because each
+    recursion step splits every quadrilateral into exactly two.
+
+    To convert the tessellation into a flat point set, pass the output to
+    `tessel2points` and then call `.reshape(-1, 2)`:
+
+    >>> ts = blue.sample_tessels(N=1024)
+    >>> pts = blue.tessel2points(ts).reshape(-1, 2)   # (1024 * m, 2)
     """
-    assert D ==2, f"{D}D tesselation is currently unsupported so sample_tessels requires D = 2"
+    if not isinstance(N, int) or N <= 0:
+        raise ValueError(f"N must be a positive integer, got {N!r}.")
     depth = int(np.log2(N))
-    assert 2**depth == N, "N must be a power of 2 because at each step each tessel is splitted to produce 2 "
-    has_targets = targets is not None
-    if has_targets:
+    if 2**depth != N:
+        raise ValueError(
+            f"N must be a power of 2 (got N={N}). "
+            "Each recursion step splits every quadrilateral into exactly two, "
+            "so only power-of-2 counts are supported."
+        )
+    if targets is not None:
         if targets.ndim == 2:
             targets = targets[None, ...]
-        assert targets.shape[1] % N == 0, f"The number of targets ({targets.shape[1]}) must be a multiple of N ({N})."
+        if targets.shape[1] % N != 0:
+            raise ValueError(
+                f"The number of target atoms ({targets.shape[1]}) must be a "
+                f"multiple of N ({N})."
+            )
 
-    if (return_atoms == True) or (targets is None):
+    if return_atoms or targets is None:
         return _tesselation(depth, targets)
     return _tesselation(depth, targets)[0]
+
 
 def sample_clusters(
     N: int = 2**15,
@@ -240,58 +304,55 @@ def sample_clusters(
     """
     Recursively partition a point set into N balanced clusters.
 
-    At each recursion step, every cluster is split into two equal halves
-    using a random median hyperplane. After log2(N) recursion levels,
-    exactly N clusters are obtained.
+    At each recursion step every cluster is split into two equal halves using
+    a random median hyperplane. After log₂(N) levels exactly N clusters are
+    obtained.
 
     Parameters
     ----------
-    N : int, default 1024
-        Number of final clusters. Must be a power of two.
-
+    N : int, default 32768
+        Number of output clusters. **Must be a power of two.**
     D : int, default 2
         Ambient dimension.
-
     targets : ndarray of shape (K, D), optional
-        Initial atoms to clusterise.
-        If omitted, a Sobol low-discrepancy sequence containing
-        K = N * n_per_cluster atoms is generated automatically.
-
+        Initial atoms to cluster. If omitted, a Sobol low-discrepancy
+        sequence of K = N * n_per_cluster atoms is generated automatically.
     n_per_cluster : int, default 16
-        Number of atoms per final cluster.
-        Only used when `targets` is not provided.
+        Number of atoms per final cluster. Only used when ``targets`` is
+        not provided.
 
     Returns
     -------
-    ndarray of shape (N, K/N, D)
-        Collection of balanced clusters.
+    ndarray of shape (N, K//N, D)
+        Collection of N balanced clusters, each containing K//N atoms.
 
     Notes
     -----
-    The recursive splitting procedure requires the total number of atoms
-    K to be divisible by N.
+    The recursive splitting requires the total atom count K to be divisible
+    by N.
+
+    To convert clusters into a flat point set, pass the output to
+    `cluster2points` and then call `.reshape(-1, D)`:
+
+    >>> cl = blue.sample_clusters(N=1024, D=2)
+    >>> pts = blue.cluster2points(cl).reshape(-1, 2)   # (1024 * m, 2)
     """
-
     depth = int(np.log2(N))
-
     if (1 << depth) != N:
         raise ValueError(
-            f"N={N} must be a power of two."
+            f"N={N} must be a power of two. "
+            "Each recursion step splits every cluster into exactly two."
         )
 
     if targets is not None:
-
         if targets.ndim == 2:
             targets = targets[None, :, :]
-
         K = targets.shape[1]
-
         if K % N != 0:
             raise ValueError(
-                f"The number of targets ({K}) "
-                f"must be divisible by N ({N})."
+                f"The number of target atoms ({K}) must be divisible by N ({N})."
             )
-        
+
     return _clusterisation(
         depth=depth,
         D=D,
@@ -299,35 +360,42 @@ def sample_clusters(
         n_per_cluster=n_per_cluster,
     )
 
+
 def tile(x: NDArray, repeat: int, flatoutput: bool = True) -> NDArray:
     """
     Tile points on the unit torus to cover [0, 1)^D periodically.
 
-    Each of the `repeat**D` copies of `x` is rescaled by `1/repeat` and
-    shifted to its own sub-cube, so that the copies together pave the
-    unit torus again. For example in 2D with
-    repeat=2: tile (0, 0) holds x/2, tile (1, 1) holds x/2 + 0.5, etc.
+    Each of the ``repeat**D`` copies of ``x`` is rescaled by ``1/repeat``
+    and shifted to its own sub-cube, so that the copies together pave the
+    unit torus again. For example in 2D with ``repeat=2``: tile (0, 0) holds
+    ``x/2``, tile (1, 1) holds ``x/2 + 0.5``, etc.
 
     Parameters
     ----------
-    x : ndarray, shape (N, D)
+    x : ndarray of shape (N, D)
         Points in [0, 1)^D (unit torus).
     repeat : int
-        Number of repetitions per axis. The output therefore contains
-        Nfinal = N * repeat**D points.
+        Number of repetitions per axis. The output contains
+        ``N_final = N * repeat**D`` points.
     flatoutput : bool, default True
-        If True, reshape the output to (Nfinal, D). If False, keep the
-        tile structure as leading axes.
+        If True, return shape is ``(N_final, D)``.
+        If False, the tile structure is kept as leading axes:
+        ``(repeat, ..., repeat, N, D)``.
 
     Returns
     -------
-    ndarray, shape (Nfinal, D) if flatoutput else (repeat, ..., repeat, N, D)
-        Tiled version of `x`, periodized over [0, 1)^D.
+    ndarray of shape (N_final, D) if flatoutput else (repeat, ..., repeat, N, D)
+        Tiled version of ``x``, periodised over [0, 1)^D.
+
+    Examples
+    --------
+    >>> x = blue.sample_points(N=1000, D=2)
+    >>> x4 = blue.tile(x, repeat=2)   # 4 000 points covering [0,1)^2
     """
     N, D = x.shape
 
     grids = np.meshgrid(*([np.arange(repeat)] * D), indexing="ij")
-    idx = np.stack(grids, axis=-1)                            # (repeat,)*D + (D,)
+    idx = np.stack(grids, axis=-1)                             # (repeat,)*D + (D,)
     offset = (idx / repeat).reshape(*([repeat] * D), 1, D)    # (repeat,)*D + (1, D)
 
     x_scaled = x / repeat                                      # (N, D)
@@ -335,143 +403,184 @@ def tile(x: NDArray, repeat: int, flatoutput: bool = True) -> NDArray:
 
     return xtiled.reshape(-1, D) if flatoutput else xtiled
 
+
 def cluster2points(clusters: NDArray, p: int = 3) -> NDArray:
     """
-    Convert clusters into low-discrepancy point set.
+    Convert a batch of clusters into a low-discrepancy point set via moment matching.
 
-    Each cluster is replaced by m points by solving a
-    moment-matching problem (Levenberg-Marquardt) via `momentum_fit`.
+    Each cluster is replaced by ``m`` representative points by solving a
+    moment-matching problem (Levenberg–Marquardt) up to polynomial order ``p``.
 
     Parameters
     ----------
-    clusters: NDArray of shape (N, k, d)
-         e.g. the output of `sample_clusters`, or the `atoms` output of
-          `sample_tessels(..., return_atoms=True)`.
+    clusters : ndarray of shape (N, k, D)
+        Batch of N clusters, each containing k atoms in D dimensions.
+        Typically the output of `sample_clusters`, or the ``atoms`` output
+        of ``sample_tessels(..., return_atoms=True)``.
     p : int, default 3
-        Maximum total moment order to match (centroid plus central moments
-        up to order p). 
+        Maximum total moment order to match (centroid + central moments up
+        to order ``p``). Higher ``p`` places more points per cluster (more
+        constraints to satisfy) and yields a denser, more accurate result.
+        ``p=3`` → 3 points per cluster in 2D; ``p=5`` → 7 points per cluster.
+
     Returns
     -------
     ndarray of shape (N, m, D)
-        m points per tessel or cluster, matching its moments up to order p.
+        ``m`` representative points per cluster matching its moments up to
+        order ``p``. To obtain a flat ``(N*m, D)`` point array, call
+        ``.reshape(-1, D)`` on the result.
+
+    Examples
+    --------
+    >>> cl = blue.sample_clusters(N=512, D=2)
+    >>> pts = blue.cluster2points(cl).reshape(-1, 2)
     """
     return _from_geometry(clusters, "clusters", p)
 
+
 def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
     """
-    Convert tessels into low-discrepancy point set.
+    Convert a batch of quadrilateral tessels into a low-discrepancy point set.
 
-    Each tessel is replaced by m points by solving a
-    moment-matching problem (Levenberg-Marquardt) via `momentum_fit`.
+    Each tessel is replaced by ``m`` representative points by solving a
+    moment-matching problem (Levenberg–Marquardt) up to polynomial order ``p``.
 
     Parameters
     ----------
-    tessels: NDArray of shape (n, 4, 2)
-          e.g. the `quad` output of `sample_tessels`.
+    tessels : ndarray of shape (N, 4, 2)
+        Batch of N quadrilaterals, each defined by 4 vertices in 2D.
+        Typically the ``quad`` output of `sample_tessels`.
     p : int, default 3
-        Maximum total moment order to match (centroid plus central moments
-        up to order p). 
-    **kwargs :
-        Additional arguments passed to `momentum_fit` (e.g., n_restarts, 
-        random_state, tol).
+        Maximum total moment order to match (centroid + central moments up
+        to order ``p``). Higher ``p`` places more points per tessel and
+        yields a denser, more accurate result.
+        ``p=3`` → 3 points per tessel; ``p=5`` → 7 points per tessel.
 
     Returns
     -------
     ndarray of shape (N, m, 2)
-        m points per tessel or cluster, matching its moments up to order p.
+        ``m`` representative points per tessel matching its moments up to
+        order ``p``. To obtain a flat ``(N*m, 2)`` point array, call
+        ``.reshape(-1, 2)`` on the result.
+
+    Examples
+    --------
+    >>> ts = blue.sample_tessels(N=512)
+    >>> pts = blue.tessel2points(ts).reshape(-1, 2)
     """
     return _from_geometry(tessels, "polygons", p)
 
-def sobol(N:int = 2**15, D:int = 2):
+
+def sobol(N: int = 2**15, D: int = 2) -> NDArray:
     """
-    Simple wrapper upon scipy.stats.qcm.sobol.
+    Generate N points in [0, 1)^D from a scrambled Sobol sequence.
+
+    A lightweight wrapper around ``scipy.stats.qmc.Sobol``.
 
     Parameters
     ----------
-    N : int
-        Number of output points.
-    D : int
+    N : int, default 32768
+        Number of output points. For best uniformity N should be a power of 2;
+        a ``UserWarning`` is emitted by SciPy if it is not.
+    D : int, default 2
         Spatial dimension.
-    
+
     Returns
     -------
     points : ndarray of shape (N, D)
-        The sampled point coordinates in [0, 1)^D
-        from a scrambled Sobol sequence
+        Sobol points in [0, 1)^D.
 
     Notes
     -----
-    It is recomanded (but not mandatory) that N is a power of 2
-    for higher accuracy
+    Sobol sequences have much lower discrepancy than i.i.d. uniform samples
+    and are useful as initialisations (warm starts) for other samplers.
+    Requires ``scipy`` (``pip install scipy``).
     """
-    return _sobol_warmstart(N= N, D = D)
+    return _sobol_warmstart(N=N, D=D)
 
-def pinwheel_base():
+
+def pinwheel_base() -> NDArray:
     """
-    Returns the base Conway triangle for pinwheel aperiodic tiling
+    Return the base Conway triangle for pinwheel aperiodic tiling.
+
+    Returns
+    -------
+    ndarray of shape (3, 2)
+        The three vertices of the base 1-2-√5 right triangle in [0, 2] × [0, 1].
     """
     return _BASE.copy()
 
+
 def pinwheel_transform(
-    points: NDArray = pinwheel_base(), 
-    depth: int = 4, 
+    points: NDArray = pinwheel_base(),
+    depth: int = 4,
 ) -> NDArray:
     """
     Apply a Pinwheel tiling transformation to a set of points.
 
-    This function generates a fractal tiling pinwheel_based on the recursive subdivision 
-    of the Conway triangle (Pinwheel tiling) and maps the input points onto 
-    each of the resulting triangles.
+    Recursively subdivides the Conway triangle (Pinwheel tiling) and maps
+    the input points onto each resulting triangle, producing a fractal,
+    aperiodic tiling.
 
     Parameters
     ----------
-    points : ndarray, default is the pinwheel_base triangle
-        The coordinates of the points to transform, living on the pinwheel_base triangle.
-        - If shape is (2,): the same point is projected onto every 
-          triangle in the tiling.
-        - If shape is (M, 2): the same set of points is projected onto every 
-          triangle in the tiling.
-        - If shape is (N, M, 2): each set of M points is projected onto its 
-          corresponding triangle N.
-    depth : int, optional
-        Number of subdivision iterations. The number of resulting triangles 
-        grows exponentially with depth. Default is 5.
+    points : ndarray, default ``pinwheel_base()``
+        The coordinates of points defined on the base Conway triangle.
+
+        - shape ``(2,)``    — one point projected onto every triangle.
+        - shape ``(M, 2)``  — M points projected onto every triangle.
+        - shape ``(N, M, 2)`` — each set of M points mapped to its own triangle.
+    depth : int, default 4
+        Number of subdivision iterations. The number of triangles grows as
+        ``4 × 5^depth``. Use depth ≤ 5 to avoid memory issues.
 
     Returns
     -------
-    ndarray
-        An array of shape (N, M, 2) containing the transformed points for 
-        each of the N triangles generated at the specified depth.
+    ndarray of shape (T, M, 2)
+        Transformed points for each of the T triangles at the given depth.
+        T = 4 × 5^depth.
 
     Notes
     -----
-    The Pinwheel tiling is a non-periodic tiling where each triangle is 
-    subdivided into 5 smaller triangles, each rotated by an angle of 
-    $\arctan(1/2)$ relative to the parent.
+    The Pinwheel tiling is non-periodic: each triangle is subdivided into 5
+    smaller triangles, each rotated by arctan(1/2) relative to its parent.
+    All orientations are dense on the circle, making the tiling isotropic.
+
+    Examples
+    --------
+    >>> pw0 = blue.pinwheel_base()          # (3, 2) base triangle
+    >>> pts = blue.tessel2points(pw0)       # (3, 3, 2) — 3 points per sub-region
+    >>> tiling = blue.pinwheel_transform(pts, depth=4)  # (T, 3, 2)
+    >>> flat = tiling.reshape(-1, 2)        # flatten to a point set
     """
     tiling = pinwheel_base()[None]
-    for _ in range(depth):  
+    for _ in range(depth):
         tiling = _subdivide(tiling)
 
-    tiling = np.concatenate([tiling, -tiling + np.array([[2.0, 1.0]])], axis = 0)
-    tiling = np.concatenate([tiling, tiling* np.array([[-1.0, 1.0]]) + np.array([[2.0, 1.0]])], axis = 0)
-    M, t = _full_transform(pinwheel_base(), tiling/2.0)
+    tiling = np.concatenate([tiling, -tiling + np.array([[2.0, 1.0]])], axis=0)
+    tiling = np.concatenate(
+        [tiling, tiling * np.array([[-1.0, 1.0]]) + np.array([[2.0, 1.0]])], axis=0
+    )
+    M, t = _full_transform(pinwheel_base(), tiling / 2.0)
 
     if points.ndim == 1:
-        points = np.einsum('nij,j-> ni', M, points) + t
+        points = np.einsum("nij,j-> ni", M, points) + t
     elif points.ndim == 2:
-        points = np.einsum('nij,kj->nki', M, points) + t[:, None, :]
+        points = np.einsum("nij,kj->nki", M, points) + t[:, None, :]
     else:
-        points = np.einsum('nij,nkj->nki', M, points) + t[:, None, :]
+        points = np.einsum("nij,nkj->nki", M, points) + t[:, None, :]
     return points
 
-def _pinwheel_warmstart(N):
+
+def _pinwheel_warmstart(N: int) -> NDArray:
     """
-    simple wrapper upon tessel2points + pinwheel_transform to sample exactly N points
-    only for 2D
+    Internal helper: sample exactly N 2D blue-noise points via Pinwheel tiling.
+
+    Uses tessel2points + pinwheel_transform then crops/wraps to exactly N points.
+    Only valid for D=2.
     """
-    xbase = tessel2points(pinwheel_base(), p = 3) #(3, 2)
-    depth = int(np.log(N/3)/np.log(5) + 1)
-    intensity = (3*4*5**depth)
-    x = pinwheel_transform(xbase, depth = depth) #(4*depth**5, 3, 2)
-    return _x_warmstart(x, N, intensity = intensity) #(N, 2)
+    xbase = tessel2points(pinwheel_base(), p=3)           # (3, 3, 2) → 3 pts on base triangle
+    depth = int(np.log(N / 3) / np.log(5) + 1)
+    intensity = 3 * 4 * 5**depth
+    x = pinwheel_transform(xbase, depth=depth)             # (4*5^depth, 3, 2)
+    return _x_warmstart(x, N, intensity=intensity)         # (N, 2)
