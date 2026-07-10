@@ -60,7 +60,7 @@ x = blue.sample_points(N, D, method="rgbn")
 
 | Method         | Description                              |
 |----------------|------------------------------------------|
-| `rgbn`         | Recursive Green-Blue Noise 🔄            |
+| `rgbn`         | Recursive Gaussian-Blue Noise 🔄            |
 | `nufft`        | Non-Uniform Fast Fourier Transform 📉    |
 | `bruteforce`   | Base GBN sampler (best quality, slower)  |
 
