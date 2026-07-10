@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 
-from .math import structure_factor as _structure_factor
+from .math import structure_factor 
 from .run.run_tessels import back_merge_tessels
 from .run.run_clusters import back_merge_clusters
 
@@ -66,10 +66,11 @@ def plot(
 
     scale_min = pts.min()
     scale_max = pts.max()
+    scale_delta = scale_max - scale_min
 
     if auto_zoom and (len(pts) > max_points):
         zoom = (max_points / len(pts)) ** (1.0 / D)
-        pts = pts[(pts <= scale_min*zoom + scale_max).all(axis=1)]
+        pts = pts[(pts <= scale_delta*zoom + scale_min).all(axis=1)]
 
     kw = dict(s=10_000/len(pts), color="black")
     kw.update(scatter_kw)
@@ -106,6 +107,7 @@ def plot_structure_factor(
     points: NDArray,
     resolution: int = 2000,
     smoothed: bool = True,
+    min_val: float = 1e-20,
     ax: plt.Axes | None = None,
     return_fig: bool = False,
     **plot_kw,
@@ -123,6 +125,9 @@ def plot_structure_factor(
         Number of sampled wave vectors used to estimate sf.
     smoothed : bool, default True
         If True, apply a local log-log average. If False, plot raw values.
+    min_val : float, default 1e-20
+        minimal value that can be ploted in the log log. Used to avoid
+        overflow when log is applyed.
     ax : matplotlib Axes, optional
         Existing axes to draw into. If None, a new figure is created.
     return_fig : bool, default False
@@ -135,7 +140,8 @@ def plot_structure_factor(
     (fig, ax) or None
     """
     pts = np.asarray(points).reshape(-1, np.asarray(points).shape[-1])
-    k, S = _structure_factor(pts, resolution=resolution)
+    k, S = structure_factor(pts, resolution=resolution)
+    S = S.clip(min = min_val) #avoid overflow in log log
 
     if smoothed:
         logk = np.log(k)

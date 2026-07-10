@@ -31,7 +31,7 @@ from .momentum_polygons import central_moments as polygon_central_moments
 
 MAX_P = 100
 
-def from_geometry(geometry, gtype, p, **kwargs):
+def _from_geometry(geometry, gtype, p, **kwargs):
     no_batch = geometry.ndim == 2
     if no_batch:
         geometry = geometry[None]
