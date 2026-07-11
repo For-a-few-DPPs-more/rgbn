@@ -10,8 +10,9 @@
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
-
+   
    blue_sampler.im2points
+   blue_sampler.im2quads
 ```
 
 ### Sampling
