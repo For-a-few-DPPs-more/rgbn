@@ -258,7 +258,7 @@ def _nufft_pipeline(
     # ------------------------------------------------------------------
     log("[2/4] Warmup (30 steps)…")
     t0 = time.time()
-    x_grid, losses_warmup = _run_optimization(x_grid, 30, learning_rate, shifts_warmup)
+    x_grid, losses_warmup = _run_optimization(x_grid, n_iter//2, learning_rate, shifts_warmup)
     losses_warmup.block_until_ready()
     log(
         f"      done in {time.time() - t0:.2f}s | "
