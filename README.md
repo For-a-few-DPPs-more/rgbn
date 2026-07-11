@@ -165,7 +165,6 @@ The algorithms and mathematical tools implemented in **blue-sampler** are based 
   *A. Gabrielli, B. Jancovici, M. Joyce, J. L. Lebowitz, L. Pietronero, and F. Sylos Labini.*  
   **Generation of Primordial Cosmological Perturbations from Statistical Mechanical Models.**  
   *Physical Review D*, **67**(4):043506, 2003.  
-  https://doi.org/10.1103/PhysRevD.67.043506
 
 - **SquareNet** [(v1.3.11). 2026](https://squarenet.readthedocs.io/en/latest/).  
   Grid data structure for point clouds, codeveloped with RGBN \
