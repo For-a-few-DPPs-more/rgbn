@@ -211,7 +211,7 @@ def sample_points(
             )
 
     if nufft:
-        return _nufft_pipeline(N, D, lr=lr, warmstart=warmstart,
+        return _nufft_pipeline(N, D, lr=lr, warmstart=x,
                                verbose=verbose, n_iter=10 * n_iter)
 
     if verbose >= 1:
