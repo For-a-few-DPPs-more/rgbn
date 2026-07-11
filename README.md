@@ -114,7 +114,7 @@ blue.plot_polygons(pw4) 🔺
 x0 = blue.tessel2points(pw0) #(m, D=2)
 #then replicate the sample on the full triangulation,
 #in a fractal way
-x4 = blue.pinwheel_transform(x0) #(4*5**depth, m, D=2)
+x4 = blue.pinwheel_transform(x0, depth = 4) #(4*5**depth, m, D=2)
 ```
 
 > **Note**: The conversion from geometric objects (polygons or clusters) to point sets is performed using a standard **moment matching** technique. cluster2points(x, p = 3) and tessel2points(x, p = 3) will sample m points per batch that mimic the statistical {0, 1, ... p-1} moments of the batch.
