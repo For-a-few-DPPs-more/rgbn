@@ -3,6 +3,7 @@
 [![GitHub](https://img.shields.io/badge/source-GitHub-black?logo=github)](https://github.com/For-a-few-DPPs-more/rgbn)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/For-a-few-DPPs-more/rgbn/blob/main/examples.ipynb)
 
+
 # blue-sampler
 
 **Generate large stealthy point patterns** on the unit torus $[0, 1)^D$. 📐
@@ -37,7 +38,8 @@ blue.plot(x) 📈
 blue.plot_structure_factor(x) 📊
 
 # Image stippling
-x = blue.im2points("zebra.jpg") 🖼️
+x = blue.im2points("zebra.jpg") 🖼️ #return points
+x = blue.im2quads("vangogh.jpg")   #quadrilaterals
 ```
 
 ---
@@ -114,7 +116,7 @@ blue.plot_polygons(pw4) 🔺
 x0 = blue.tessel2points(pw0) #(m, D=2)
 #then replicate the sample on the full triangulation,
 #in a fractal way
-x4 = blue.pinwheel_transform(x0) #(4*5**depth, m, D=2)
+x4 = blue.pinwheel_transform(x0, depth = 4) #(4*5**depth, m, D=2)
 ```
 
 > **Note**: The conversion from geometric objects (polygons or clusters) to point sets is performed using a standard **moment matching** technique. cluster2points(x, p = 3) and tessel2points(x, p = 3) will sample m points per batch that mimic the statistical {0, 1, ... p-1} moments of the batch.
@@ -162,9 +164,9 @@ The algorithms and mathematical tools implemented in **blue-sampler** are based 
   *arXiv:2605.22803*, 2026.
 
 - **Aperiodic tiling for hyuperuniformity (here pinwheel)**  
-  *S. Torquato and F. H. Stillinger.*  
-  **Local density fluctuations, hyperuniformity, and order metrics.**  
-  *Physical Review E*, 68(4):041113, 2003.
+  *A. Gabrielli, B. Jancovici, M. Joyce, J. L. Lebowitz, L. Pietronero, and F. Sylos Labini.*  
+  **Generation of Primordial Cosmological Perturbations from Statistical Mechanical Models.**  
+  *Physical Review D*, **67**(4):043506, 2003.  
 
 - **SquareNet** [(v1.3.11). 2026](https://squarenet.readthedocs.io/en/latest/).  
   Grid data structure for point clouds, codeveloped with RGBN \
