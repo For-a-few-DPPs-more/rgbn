@@ -162,9 +162,10 @@ The algorithms and mathematical tools implemented in **blue-sampler** are based 
   *arXiv:2605.22803*, 2026.
 
 - **Aperiodic tiling for hyuperuniformity (here pinwheel)**  
-  *S. Torquato and F. H. Stillinger.*  
-  **Local density fluctuations, hyperuniformity, and order metrics.**  
-  *Physical Review E*, 68(4):041113, 2003.
+  *A. Gabrielli, B. Jancovici, M. Joyce, J. L. Lebowitz, L. Pietronero, and F. Sylos Labini.*  
+  **Generation of Primordial Cosmological Perturbations from Statistical Mechanical Models.**  
+  *Physical Review D*, **67**(4):043506, 2003.  
+  https://doi.org/10.1103/PhysRevD.67.043506
 
 - **SquareNet** [(v1.3.11). 2026](https://squarenet.readthedocs.io/en/latest/).  
   Grid data structure for point clouds, codeveloped with RGBN \
