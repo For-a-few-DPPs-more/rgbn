@@ -34,11 +34,13 @@ from .progress import ProgressLogger
 from .run.run_tessels import _tesselation
 from .run.run_clusters import _clusterisation
 
+from .grad.im2fields import _im2targ
+
 from .pinwheels import _BASE, _subdivide, _full_transform
 
 from .momentum.momentum import _from_geometry
 
-from .viz import plot
+from .viz import plot, plot_polygons
 
 
 def im2points(image: str = "anything.jpg", N: int = 100_000) -> NDArray:
@@ -64,6 +66,37 @@ def im2points(image: str = "anything.jpg", N: int = 100_000) -> NDArray:
     plot(points, figsize=(10, 10))
     return points
 
+def im2quads(image: str = "anything.jpg", N: int = 2**15, K: int = 100) -> NDArray:
+    """
+    Image stippling with quadrilaterals
+
+    A convenience wrapper around `sample_tessels` that reads an image file and
+    uses its luminance as a target density, then plots the result.
+
+    Parameters
+    ----------
+    image : str, default "anything.jpg"
+        Path to the input image (any format supported by matplotlib/PIL).
+    N : int, default 100_000
+        Number of output points.
+    K : int, control quality of the quads by a better scanning of the image
+    the bigger K the better, but slower
+
+    Returns
+    -------
+    quads : ndarray of shape (N, 4, 2)
+        The sampled ABCD coordinates of each quad in [0, 1)^2.
+    
+    Note
+    ----
+    N must be a power of 2, if not it is silently rounded 
+    to the nearest power.
+    """
+    N = 2**int(np.log2(N))
+    points = _im2targ(image, K*N)
+    quads = sample_tessels(N = N, targets = points)
+    plot_polygons(quads, color = "blue", linewidth = 0)
+    return quads
 
 def sample_points(
     N: int = 2**15,
@@ -179,7 +212,7 @@ def sample_points(
 
     if nufft:
         return _nufft_pipeline(N, D, lr=lr, warmstart=warmstart,
-                               verbose=verbose, n_iter=50 * n_iter)
+                               verbose=verbose, n_iter=10 * n_iter)
 
     if verbose >= 1:
         print(f"✦ {D}D blue-noise pipeline — sampling {N:,} points")

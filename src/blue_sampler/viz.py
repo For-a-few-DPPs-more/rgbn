@@ -166,6 +166,8 @@ def plot_structure_factor(
             w /= w.sum()
             S_smooth[i] = np.exp(np.sum(w * logS))
         S = S.clip(min=S_smooth.min())
+    else:
+        S_smooth = np.nan
 
     kw = dict(marker="o", markersize=2, linewidth=2)
     kw.update(plot_kw)
@@ -179,7 +181,9 @@ def plot_structure_factor(
 
     ax.set_axisbelow(True)
     ax.grid(True, which="both", alpha=0.4, zorder=0)
-    ax.scatter(k, S, s=5, color=scat_color, alpha=0.6, zorder=2)
+    bigS = S >= 30*S_smooth
+    ax.scatter(k[~bigS], S[~bigS], s=5, color=scat_color, alpha=0.6, zorder=2)
+    ax.scatter(k[bigS], S[bigS], s=20, color=scat_color, alpha=0.8, zorder=2)
     ax.set_xscale("log")
     ax.set_yscale("log")
     if smoothed:
@@ -381,6 +385,8 @@ def plot_polygons(
     polygons: NDArray,
     ax: plt.Axes | None = None,
     return_fig: bool = False,
+    color: str = "auto",
+    linewidth: float = 1.2,
 ) -> tuple[plt.Figure, plt.Axes] | None:
     """
     Visualise a collection of polygons with colour-coded faces.
@@ -417,8 +423,9 @@ def plot_polygons(
         fig = ax.get_figure()
 
     n = len(polygons)
-    cmap = plt.cm.YlGnBu
-    color = cmap(0.2 + 0.8 * (np.random.permutation(np.arange(n)) / n))
+    if color == "auto":
+        cmap = plt.cm.YlGnBu
+        color = cmap(0.2 + 0.8 * (np.random.permutation(np.arange(n)) / n))
 
     x = polygons[:, :, 0]
     y = polygons[:, :, 1]
@@ -426,13 +433,13 @@ def plot_polygons(
     y_next = np.roll(y, -1, axis=1)
     areas_inv = 1 / np.abs(0.5 * np.sum(x * y_next - x_next * y, axis=1))
     areas_inv2 = areas_inv**2
-    areas_inv2 = (areas_inv2 / areas_inv2.mean() + 0.03).clip(max=1.0)
+    areas_inv2 = (areas_inv2 / areas_inv2.mean() + 0.01).clip(max=1.0)
 
     collection = PolyCollection(
         polygons,
         facecolors=color,
-        edgecolor="#FFFFFF",
-        linewidth=1.2,
+        edgecolors="none" if linewidth <= 0.01 else "#FFFFFF",
+        linewidth=linewidth,
         alpha=areas_inv2,
     )
     ax.add_collection(collection)

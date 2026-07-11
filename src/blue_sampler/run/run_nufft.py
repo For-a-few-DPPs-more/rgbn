@@ -143,9 +143,6 @@ def _nufft_pipeline(
     def ifft(x):
         return jnp.fft.ifftn(x, axes=AXES)
     
-    def nan_to_inf(x):
-        return jnp.where(jnp.isnan(x), jnp.inf, x)
-    
     def nan_to_0(x):
         return jnp.nan_to_num(x)
 
@@ -191,10 +188,11 @@ def _nufft_pipeline(
     # ------------------------------------------------------------------
     # JIT-compiled optimisation loop
     # ------------------------------------------------------------------
-    @partial(jax.jit, static_argnums=(1,))
+    @partial(jax.jit, static_argnums=(1,2))
     def _run_optimization(
         x_init: jnp.ndarray,
         n_steps: int,
+        learning_rate: float,
         shifts: jnp.ndarray,
     ) -> tuple[jnp.ndarray, jnp.ndarray]:
         optimizer = optax.adam(learning_rate)
@@ -211,7 +209,7 @@ def _nufft_pipeline(
             _step, (x_init, opt_state), None, length=n_steps
         )
         return x_final, losses
-
+    
     # ------------------------------------------------------------------
     # Shift kernels (adaptative heuristics per dimension)
     # ------------------------------------------------------------------
@@ -258,9 +256,9 @@ def _nufft_pipeline(
     # ------------------------------------------------------------------
     # Stage 2 – warmup
     # ------------------------------------------------------------------
-    log("[2/4] Warmup (50 steps)…")
+    log("[2/4] Warmup (30 steps)…")
     t0 = time.time()
-    x_grid, losses_warmup = _run_optimization(x_grid, 50, shifts_warmup)
+    x_grid, losses_warmup = _run_optimization(x_grid, 30, learning_rate, shifts_warmup)
     losses_warmup.block_until_ready()
     log(
         f"      done in {time.time() - t0:.2f}s | "
@@ -281,7 +279,7 @@ def _nufft_pipeline(
     # ------------------------------------------------------------------
     log(f"[4/4] Final optimisation ({n_iter} steps)…")
     t0 = time.time()
-    x_final, losses_final = _run_optimization(x_grid, n_iter, shifts_final)
+    x_final, losses_final = _run_optimization(x_grid, n_iter, 0.2*learning_rate, shifts_final)
     x_final.block_until_ready()
     log(
         f"      done in {time.time() - t0:.2f}s | "

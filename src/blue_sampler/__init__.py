@@ -14,6 +14,7 @@ Quick start
 """
 from .api import (
     im2points,
+    im2quads,
     tessel2points,
     cluster2points,
     sample_points,
@@ -30,6 +31,7 @@ from .datasets import generate_dataset
 
 __all__ = [
     "im2points",
+    "im2quads",
     "tessel2points",
     "cluster2points",
     "sample_points",
@@ -48,4 +50,4 @@ __all__ = [
     "tile",
 ]
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
