@@ -565,7 +565,7 @@ def pinwheel_transform(
         - shape ``(N, M, 2)`` — each set of M points mapped to its own triangle.
     depth : int, default 4
         Number of subdivision iterations. The number of triangles grows as
-        ``4 × 5^depth``. Use depth ≤ 5 to avoid memory issues.
+        ``4 × 5^depth``.
 
     Returns
     -------
