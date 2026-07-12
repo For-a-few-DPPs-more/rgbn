@@ -76,7 +76,10 @@ def plot(
         offset = np.random.rand(2)[None]
         zoom = (max_points / len(pts)) ** (1.0 / D)
         dtpts = pts / scale_delta - scale_min
-        pts = pts[((1-zoom)*offset <= dtpts <= zoom + (1-zoom)*offset).all(axis=1)]
+        pts = pts[
+            ((1-zoom)*offset <= dtpts).all(axis = 1) &
+            (dtpts<= zoom + (1-zoom)*offset).all(axis=1)
+        ]
 
     kw = dict(s=10_000 / len(pts), color="black")
     kw.update(scatter_kw)
