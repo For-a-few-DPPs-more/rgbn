@@ -28,7 +28,7 @@ from typing import Literal
 from .run.run_bruteforce import _bruteforce_pipeline
 from .run.run_recursive import _PRESETS, _recursive_pipeline
 from .run.run_nufft import _nufft_pipeline
-from .warm_start import _sobol_warmstart, _x_warmstart
+from .warm_start import _sobol_warmstart, _kronecker_warmstart, _x_warmstart
 from .progress import ProgressLogger
 
 from .run.run_tessels import _tesselation
@@ -42,6 +42,9 @@ from .momentum.momentum import _from_geometry
 
 from .viz import plot, plot_polygons
 
+BlueNoiseMethod = Literal["rgbn", "nufft", "bruteforce"]
+WarmstartMethod = Literal["Kronecker", "Sobol", "Pinwheel"]
+ClusterMethod = Literal["Kronecker", "Sobol", "Pinwheel"]
 
 def im2points(image: str = "anything.jpg", N: int = 100_000) -> NDArray:
     """
@@ -102,8 +105,8 @@ def sample_points(
     N: int = 2**15,
     D: int = 2,
     lr: float = 1.0,
-    method: Literal["rgbn", "nufft", "bruteforce"] = "rgbn",
-    warmstart: Literal["Sobol", "Pinwheel"] | NDArray = None,
+    method: BlueNoiseMethod = "rgbn",
+    warmstart: NDArray | WarmstartMethod | None = None,
     n_iter: int = 6,
     targets: NDArray | None = None,
     verbose: int = 1,
@@ -133,10 +136,11 @@ def sample_points(
           Good alternative for 2D; does **not** support a ``targets`` density.
         - ``"bruteforce"`` — Exact GBN with no truncation. Best quality but
           O(N²) cost. Automatically selected when N ≤ 2 000.
-    warmstart : {None, "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
+    warmstart : {None, "Kronecker", "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
         Initial point configuration before optimisation:
 
         - ``None``        — default random / recursive initialisation.
+        - ``"Kronecker"``  — initialise with a random Kronecker lattice
         - ``"Sobol"``     — initialise with a Sobol low-discrepancy sequence
           (requires ``scipy``). Recommended when N is a power of 2.
         - ``"Pinwheel"``  — initialise with a pinwheel aperiodic tiling
@@ -170,6 +174,7 @@ def sample_points(
     bruteforce = method == "bruteforce" or N <= 2_000
     nufft = method == "nufft"
 
+    has_warmstart = warmstart is not None
     has_target = targets is not None
     if has_target:
         if method == "nufft":
@@ -179,36 +184,12 @@ def sample_points(
             )
         n_iter *= 2
 
-    x = None
-    if warmstart is None:
-        pass  # x stays None → random init inside the pipeline
-    else:
+    if has_warmstart:
         lr /= 2
         n_iter *= 2
-        if isinstance(warmstart, np.ndarray):
-            if warmstart.shape != (N, D):
-                raise ValueError(
-                    f"warmstart array must have shape {(N, D)}, got {warmstart.shape}"
-                )
-            x = warmstart.copy()
-        elif warmstart == "Sobol":
-            x = _sobol_warmstart(N, D)
-        elif warmstart == "Pinwheel":
-            if D == 2:
-                x = _pinwheel_warmstart(N)
-            else:
-                warnings.warn(
-                    f"warmstart='Pinwheel' is only supported for D=2 (got D={D}); "
-                    "falling back to Sobol initialisation.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                x = _sobol_warmstart(N, D)
-        else:
-            raise ValueError(
-                f"unsupported warmstart={warmstart!r}; expected None, "
-                "'Sobol', 'Pinwheel', or an ndarray of shape (N, D)."
-            )
+        x = warmstart_points(N, D, warmstart)
+    else:
+        x = None
 
     if nufft:
         return _nufft_pipeline(N, D, lr=lr, warmstart=x,
@@ -258,7 +239,7 @@ def sample_points(
 def sample_tessels(
     N: int = 2**15,
     D: int = 2,
-    targets: NDArray | None = None,
+    targets:  NDArray | None = None,
     return_atoms: bool = False,
 ) -> NDArray | tuple[NDArray, NDArray]:
     """
@@ -305,8 +286,6 @@ def sample_tessels(
     >>> ts = blue.sample_tessels(N=1024)
     >>> pts = blue.tessel2points(ts).reshape(-1, 2)   # (1024 * m, 2)
     """
-    if not isinstance(N, int) or N <= 0:
-        raise ValueError(f"N must be a positive integer, got {N!r}.")
     depth = int(np.log2(N))
     if 2**depth != N:
         raise ValueError(
@@ -314,6 +293,7 @@ def sample_tessels(
             "Each recursion step splits every quadrilateral into exactly two, "
             "so only power-of-2 counts are supported."
         )
+
     if targets is not None:
         if targets.ndim == 2:
             targets = targets[None, ...]
@@ -331,8 +311,8 @@ def sample_tessels(
 def sample_clusters(
     N: int = 2**15,
     D: int = 2,
-    targets: NDArray | None = None,
-    n_per_cluster: int = 16,
+    targets: NDArray | ClusterMethod  = "Kronecker",
+    n_per_cluster: int = 32,
 ) -> NDArray:
     """
     Recursively partition a point set into N balanced clusters.
@@ -347,9 +327,11 @@ def sample_clusters(
         Number of output clusters. **Must be a power of two.**
     D : int, default 2
         Ambient dimension.
-    targets : ndarray of shape (K, D), optional
-        Initial atoms to cluster. If omitted, a Sobol low-discrepancy
-        sequence of K = N * n_per_cluster atoms is generated automatically.
+    targets : ndarray of shape (K, D) or method name, optional
+        Initial atoms to cluster. Default is  a Kronecker lattice.
+        If a method name  is given, a sequence of K = N * n_per_cluster 
+        atoms is generated automatically following the method.
+        Supported methods are ("Kronecker", "Sobol", "Pinwheel").
     n_per_cluster : int, default 16
         Number of atoms per final cluster. Only used when ``targets`` is
         not provided.
@@ -377,7 +359,7 @@ def sample_clusters(
             "Each recursion step splits every cluster into exactly two."
         )
 
-    if targets is not None:
+    if isinstance(targets, np.ndarray):
         if targets.ndim == 2:
             targets = targets[None, :, :]
         K = targets.shape[1]
@@ -385,6 +367,8 @@ def sample_clusters(
             raise ValueError(
                 f"The number of target atoms ({K}) must be divisible by N ({N})."
             )
+    else:
+        targets = warmstart_points(N*n_per_cluster, D, targets)[None, :, :]
 
     return _clusterisation(
         depth=depth,
@@ -437,7 +421,7 @@ def tile(x: NDArray, repeat: int, flatoutput: bool = True) -> NDArray:
     return xtiled.reshape(-1, D) if flatoutput else xtiled
 
 
-def cluster2points(clusters: NDArray, p: int = 3) -> NDArray:
+def cluster2points(clusters: NDArray, p: int = 3, verbose: int = 1, n_iter: int = 20) -> NDArray:
     """
     Convert a batch of clusters into a low-discrepancy point set via moment matching.
 
@@ -455,7 +439,10 @@ def cluster2points(clusters: NDArray, p: int = 3) -> NDArray:
         to order ``p``). Higher ``p`` places more points per cluster (more
         constraints to satisfy) and yields a denser, more accurate result.
         ``p=3`` → 3 points per cluster in 2D; ``p=5`` → 7 points per cluster.
-
+    verbose : int, default 1
+            Verbosity level: ``0`` = silent, ``1`` = live progress bar with ETA.
+    n_iter : int, default 20
+            Number of iterations of the solver.
     Returns
     -------
     ndarray of shape (N, m, D)
@@ -468,10 +455,10 @@ def cluster2points(clusters: NDArray, p: int = 3) -> NDArray:
     >>> cl = blue.sample_clusters(N=512, D=2)
     >>> pts = blue.cluster2points(cl).reshape(-1, 2)
     """
-    return _from_geometry(clusters, "clusters", p)
+    return _from_geometry(clusters, "clusters", p, verbose, n_iter)
 
 
-def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
+def tessel2points(tessels: NDArray, p: int = 3, verbose: int = 1, n_iter: int = 20) -> NDArray:
     """
     Convert a batch of quadrilateral tessels into a low-discrepancy point set.
 
@@ -488,6 +475,10 @@ def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
         to order ``p``). Higher ``p`` places more points per tessel and
         yields a denser, more accurate result.
         ``p=3`` → 3 points per tessel; ``p=5`` → 7 points per tessel.
+    verbose : int, default 1
+                Verbosity level: ``0`` = silent, ``1`` = live progress bar with ETA.
+    n_iter : int, default 20
+            Number of iterations of the solver.
 
     Returns
     -------
@@ -501,7 +492,7 @@ def tessel2points(tessels: NDArray, p: int = 3) -> NDArray:
     >>> ts = blue.sample_tessels(N=512)
     >>> pts = blue.tessel2points(ts).reshape(-1, 2)
     """
-    return _from_geometry(tessels, "polygons", p)
+    return _from_geometry(tessels, "polygons", p, verbose, n_iter)
 
 
 def sobol(N: int = 2**15, D: int = 2) -> NDArray:
@@ -565,7 +556,7 @@ def pinwheel_transform(
         - shape ``(N, M, 2)`` — each set of M points mapped to its own triangle.
     depth : int, default 4
         Number of subdivision iterations. The number of triangles grows as
-        ``4 × 5^depth``. Use depth ≤ 5 to avoid memory issues.
+        ``4 × 5^depth``.
 
     Returns
     -------
@@ -617,3 +608,72 @@ def _pinwheel_warmstart(N: int) -> NDArray:
     intensity = 3 * 4 * 5**depth
     x = pinwheel_transform(xbase, depth=depth)             # (4*5^depth, 3, 2)
     return _x_warmstart(x, N, intensity=intensity)         # (N, 2)
+
+
+def warmstart_points(
+    N: int,
+    D: int,
+    method: WarmstartMethod | NDArray | None = None,
+    seed: int | None = None,
+) -> NDArray:
+    """
+    Generate an initial point cloud in [0, 1)^D.
+
+    Parameters
+    ----------
+    N : int
+        Number of points.
+
+    D : int
+        Ambient dimension.
+
+    method : {"Kronecker", "Sobol", "Pinwheel"} or ndarray or None
+        Warm start strategy. If an ndarray is provided, it must already
+        contain points of shape (N, D).
+
+    seed : int or None, optional
+        Random seed used by stochastic warm start generators.
+
+    Returns
+    -------
+    sample : np.ndarray of shape (N, D)
+        Initial point cloud in the unit hypercube [0, 1)^D.
+
+    Raises
+    ------
+    ValueError
+        If the provided warm start array has an incorrect shape or if the
+        requested method is unsupported.
+    """
+    if method is None:
+        return _sobol_warmstart(N, D, seed=seed)
+
+    if isinstance(method, np.ndarray):
+        if method.shape != (N, D):
+            raise ValueError(
+                f"warmstart array must have shape {(N, D)}, "
+                f"got {method.shape}"
+            )
+        return method.copy()
+
+    if method == "Sobol":
+        return _sobol_warmstart(N, D, seed=seed)
+
+    if method == "Kronecker":
+        return _kronecker_warmstart(N, D, seed=seed)
+
+    if method == "Pinwheel":
+        if D == 2:
+            return _pinwheel_warmstart(N)
+        warnings.warn(
+            f"warmstart='Pinwheel' is only supported for D=2 (got D={D}); "
+            "falling back to Sobol initialisation.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return _sobol_warmstart(N, D, seed=seed)
+
+    raise ValueError(
+        f"unsupported warmstart={method!r}; expected None, "
+        "'Kronecker', 'Sobol', 'Pinwheel', or an ndarray of shape (N, D)."
+    )

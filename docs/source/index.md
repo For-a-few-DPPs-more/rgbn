@@ -26,7 +26,7 @@
    blue_sampler.sample_clusters
    blue_sampler.tessel2points
    blue_sampler.cluster2points
-   blue_sampler.sobol
+   blue_sampler.warmstart_points
    blue_sampler.pinwheel_base
    blue_sampler.pinwheel_transform
 ```

@@ -40,12 +40,12 @@ def plot(
     ----------
     points : ndarray of shape (N, D) or (N, M, D)
         Point coordinates, with D in {2, 3}.
-        Arrays with more than 2 dimensions are flattened along the leading
-        axes before plotting. Dimensions beyond 3 are silently dropped (only
+        Arrays of shape (N, K, D) are flattened to (N*K, D) before
+        plotting. Dimensions beyond 3 are silently dropped (only
         the first 3 coordinates are displayed).
     auto_zoom : bool, default False
         If True, large point sets are zoomed in so that at most
-        ``max_points`` points are rendered, keeping the figure responsive.
+        ``max_points`` points are rendered, keeping the figure readable.
     max_points : int, default 30_000
         Maximum number of points to render when ``auto_zoom`` is True.
     ax : matplotlib Axes, optional
@@ -73,8 +73,13 @@ def plot(
     scale_delta = scale_max - scale_min
 
     if auto_zoom and (len(pts) > max_points):
+        offset = np.random.rand(2)[None]
         zoom = (max_points / len(pts)) ** (1.0 / D)
-        pts = pts[(pts <= scale_delta * zoom + scale_min).all(axis=1)]
+        dtpts = pts / scale_delta - scale_min
+        pts = pts[
+            ((1-zoom)*offset <= dtpts).all(axis = 1) &
+            (dtpts<= zoom + (1-zoom)*offset).all(axis=1)
+        ]
 
     kw = dict(s=10_000 / len(pts), color="black")
     kw.update(scatter_kw)
@@ -401,7 +406,7 @@ def plot_polygons(
         N polygons, each defined by M vertices in 2D.
         Typical inputs:
 
-        - Output of `pinwheel_transform` — triangles of shape (T, 3, 2).
+        - Output of `pinwheel_transform` — triangles of shape (N, 3, 2).
         - Output of `sample_tessels` — quadrilaterals of shape (N, 4, 2).
     ax : matplotlib Axes, optional
         Existing axes to draw into. If None, a new figure is created.
@@ -417,6 +422,8 @@ def plot_polygons(
     >>> pw = blue.pinwheel_transform(blue.pinwheel_base(), depth=4)
     >>> blue.plot_polygons(pw)
     """
+    if len(polygons) >= 30_000:
+        linewidth = 0
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
     else:
