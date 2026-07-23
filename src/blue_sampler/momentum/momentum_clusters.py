@@ -198,10 +198,10 @@ def solve_moments_lm(
 
         JT = J.transpose(0, 2, 1)
 
-        JtJ = Jt @ J
+        JTJ = JT @ J
 
         trace_JTJ = np.trace(JTJ, axis1=1, axis2=2)  # shape (B,)
-        min_lam = trace_JTJ * 1e-7/JtJ.shape[1]      # safety
+        min_lam = trace_JTJ * 1e-7/JTJ.shape[1]      # safety
         lam = np.maximum(lam, min_lam)
 
         A = JTJ + lam[:, None, None] * eye
