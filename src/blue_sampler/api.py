@@ -127,6 +127,7 @@ def sample_points(
         less uniform patterns. Values below 1.0 slow convergence but can
         improve final quality. The default of 1.0 works well in most cases;
         only tune this if you have a specific speed/quality trade-off in mind.
+
     method : {"rgbn", "nufft", "bruteforce"}, default "rgbn"
         Sampling algorithm:
 
@@ -136,6 +137,7 @@ def sample_points(
           Good alternative for 2D; does **not** support a ``targets`` density.
         - ``"bruteforce"`` — Exact GBN with no truncation. Best quality but
           O(N²) cost. Automatically selected when N ≤ 2 000.
+
     warmstart : {None, "Kronecker", "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
         Initial point configuration before optimisation:
 
@@ -146,6 +148,7 @@ def sample_points(
         - ``"Pinwheel"``  — initialise with a pinwheel aperiodic tiling
           (2D only). Falls back to Sobol for D > 2.
         - ndarray         — use the provided array as the starting configuration.
+        
     n_iter : int, default 6
         Number of solver iterations. Each iteration runs 10 gradient steps
         plus one structural gridification step (neighbour lookup).
