@@ -145,6 +145,7 @@ def solve_moments_lm(
     target_moments,
     orders,
     init_points,
+    verbose=1,
     n_iter=50,
     lambda0=1e-2,
     tol=1e-12,
@@ -194,7 +195,29 @@ def solve_moments_lm(
 
     cost = 0.5 * np.sum(r * r, axis=1)
 
-    for _ in range(n_iter):
+    if verbose >= 1:
+        import time
+        print(f"✦ {D}D Moment matching pipeline — sampling {B:,} x {n:,} points\n")
+        t0 = time.perf_counter()
+
+
+    for it in range(n_iter):
+        if verbose >= 1:
+            if it <= 3:
+                eta = "calibrating…"
+            if it == 4:
+                dt = time.perf_counter() - t0
+                eta = _duration(dt/4 * (n_iter - 1))
+            width = 20
+            done = ((it+1) * width) // n_iter
+            bar = "▓" * (done) + "░" * (width - done)
+            print(
+                f"\rMatching target… [{bar}] "
+                f"{it+1}/{n_iter}  ETA ",
+                eta.ljust(len("calibrating…")),
+                end="",
+                flush=True,
+            )
 
         JT = J.transpose(0, 2, 1)
 
@@ -260,4 +283,23 @@ def solve_moments_lm(
         if cost.max() < tol:
             break
 
+    if verbose >= 1:
+        bar = "▓" * (width)
+        print(
+            f"\rMatching target… [{bar}] "
+            f"{n_iter}/{n_iter}  ETA ",
+            eta.ljust(len("calibrating…")),
+            end="",
+            flush=True,
+        )
+        time.sleep(0.05)
+        print("\nDone")
+
     return points, history, cost
+
+def _duration(seconds: float) -> str:
+        seconds = round(seconds)
+        if seconds < 60:
+            return f"{seconds:.0f}s"
+        minutes, rest = divmod(seconds, 60)
+        return f"{minutes:.0f}min{rest:02.0f}"

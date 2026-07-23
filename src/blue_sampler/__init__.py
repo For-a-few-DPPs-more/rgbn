@@ -24,6 +24,7 @@ from .api import (
     pinwheel_base,
     pinwheel_transform,
     tile,
+    warmstart_points,
 )
 from .viz import plot, plot_structure_factor, plot_tessels, plot_clusters, plot_polygons
 from .math import structure_factor
@@ -48,6 +49,7 @@ __all__ = [
     "plot_clusters",
     "plot_polygons",
     "tile",
+    "warmstart_points",
 ]
 
-__version__ = "1.2.7"
+__version__ = "1.3.0"

@@ -6,7 +6,6 @@ from __future__ import annotations
 import sys
 import time
 
-
 class ProgressLogger:
     """Hierarchical \r-based progress display for nested pipeline levels."""
 

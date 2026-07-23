@@ -31,7 +31,7 @@ from .momentum_polygons import central_moments as polygon_central_moments
 
 MAX_P = 100
 
-def _from_geometry(geometry, gtype, p, **kwargs):
+def _from_geometry(geometry, gtype, p, verbose, n_iter, **kwargs):
     no_batch = geometry.ndim == 2
     if no_batch:
         geometry = geometry[None]
@@ -49,6 +49,8 @@ def _from_geometry(geometry, gtype, p, **kwargs):
         distribution=geometry,
         distribution_type=gtype,
         p=p,
+        verbose = verbose,
+        n_iter = n_iter,
         **kwargs
     )
 
@@ -163,6 +165,7 @@ def momentum_fit(
     distribution,
     distribution_type="clusters",
     p=3,
+    verbose=1,
     weights=None,
     n_restarts=1,
     restart_tol=1e-30,
@@ -227,6 +230,7 @@ def momentum_fit(
             target_moments,
             orders,
             init,
+            verbose = verbose,
             n_iter=n_iter,
             lambda0=lambda0,
             tol=tol,
