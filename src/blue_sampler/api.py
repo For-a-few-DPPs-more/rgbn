@@ -28,7 +28,7 @@ from typing import Literal
 from .run.run_bruteforce import _bruteforce_pipeline
 from .run.run_recursive import _PRESETS, _recursive_pipeline
 from .run.run_nufft import _nufft_pipeline
-from .warm_start import _sobol_warmstart, _kronecker_warmstart, _x_warmstart
+from .warm_start import _sobol_warmstart, _goodlattice_warmstart, _x_warmstart
 from .progress import ProgressLogger
 
 from .run.run_tessels import _tesselation
@@ -43,8 +43,8 @@ from .momentum.momentum import _from_geometry
 from .viz import plot, plot_polygons
 
 BlueNoiseMethod = Literal["rgbn", "nufft", "bruteforce"]
-WarmstartMethod = Literal["Kronecker", "Sobol", "Pinwheel"]
-ClusterMethod = Literal["Kronecker", "Sobol", "Pinwheel"]
+WarmstartMethod = Literal["Goodlattice", "Sobol", "Pinwheel"]
+ClusterMethod = Literal["Goodlattice", "Sobol", "Pinwheel"]
 
 def im2points(image: str = "anything.jpg", N: int = 100_000) -> NDArray:
     """
@@ -138,11 +138,11 @@ def sample_points(
         - ``"bruteforce"`` — Exact GBN with no truncation. Best quality but
           O(N²) cost. Automatically selected when N ≤ 2 000.
 
-    warmstart : {None, "Kronecker", "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
+    warmstart : {None, "Goodlattice", "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
         Initial point configuration before optimisation:
 
         - ``None``        — default random / recursive initialisation.
-        - ``"Kronecker"``  — initialise with a random Kronecker lattice
+        - ``"Goodlattice"``  — initialise with a random Goodlattice lattice
         - ``"Sobol"``     — initialise with a Sobol low-discrepancy sequence
           (requires ``scipy``). Recommended when N is a power of 2.
         - ``"Pinwheel"``  — initialise with a pinwheel aperiodic tiling
@@ -314,7 +314,7 @@ def sample_tessels(
 def sample_clusters(
     N: int = 2**15,
     D: int = 2,
-    targets: NDArray | ClusterMethod  = "Kronecker",
+    targets: NDArray | ClusterMethod  = "Goodlattice",
     n_per_cluster: int = 32,
 ) -> NDArray:
     """
@@ -331,10 +331,11 @@ def sample_clusters(
     D : int, default 2
         Ambient dimension.
     targets : ndarray of shape (K, D) or method name, optional
-        Initial atoms to cluster. Default is  a Kronecker lattice.
+        Initial atoms to cluster. Default is  a Good lattice = lattice
+        with a basis found by Korobov optimization to properly match the shape (K, D).
         If a method name  is given, a sequence of K = N * n_per_cluster 
         atoms is generated automatically following the method.
-        Supported methods are ("Kronecker", "Sobol", "Pinwheel").
+        Supported methods are ("Goodlattice", "Sobol", "Pinwheel").
     n_per_cluster : int, default 16
         Number of atoms per final cluster. Only used when ``targets`` is
         not provided.
@@ -630,7 +631,7 @@ def warmstart_points(
     D : int
         Ambient dimension.
 
-    method : {"Kronecker", "Sobol", "Pinwheel"} or ndarray or None
+    method : {"Goodlattice", "Sobol", "Pinwheel"} or ndarray or None
         Warm start strategy. If an ndarray is provided, it must already
         contain points of shape (N, D).
 
@@ -662,8 +663,8 @@ def warmstart_points(
     if method == "Sobol":
         return _sobol_warmstart(N, D, seed=seed)
 
-    if method == "Kronecker":
-        return _kronecker_warmstart(N, D, seed=seed)
+    if method == "Goodlattice":
+        return _goodlattice_warmstart(N, D, seed=seed)
 
     if method == "Pinwheel":
         if D == 2:
@@ -678,5 +679,5 @@ def warmstart_points(
 
     raise ValueError(
         f"unsupported warmstart={method!r}; expected None, "
-        "'Kronecker', 'Sobol', 'Pinwheel', or an ndarray of shape (N, D)."
+        "'Goodlattice', 'Sobol', 'Pinwheel', or an ndarray of shape (N, D)."
     )
