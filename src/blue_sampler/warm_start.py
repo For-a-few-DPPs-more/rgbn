@@ -140,7 +140,7 @@ class KorobovLLL:
 
 
 # ---------------------------------------------------------------------------
-# Public warm-start samplers
+# Public warmstart samplers
 # ---------------------------------------------------------------------------
 
 def _goodlattice_warmstart(
