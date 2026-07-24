@@ -183,12 +183,13 @@ def plot_structure_factor(
         fig = ax.get_figure()
 
     scat_color = "lightgray" if smoothed else "tab:blue"
+    scat_big_color = "gray" if smoothed else "tab:blue"
 
     ax.set_axisbelow(True)
     ax.grid(True, which="both", alpha=0.4, zorder=0)
     bigS = S >= 30*S_smooth
     ax.scatter(k[~bigS], S[~bigS], s=5, color=scat_color, alpha=0.6, zorder=2)
-    ax.scatter(k[bigS], S[bigS], s=20, color=scat_color, alpha=0.8, zorder=2)
+    ax.scatter(k[bigS], S[bigS], s=20, color=scat_big_color, alpha=1.0, zorder=2)
     ax.set_xscale("log")
     ax.set_yscale("log")
     if smoothed:
