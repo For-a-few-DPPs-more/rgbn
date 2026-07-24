@@ -607,7 +607,7 @@ def _pinwheel_warmstart(N: int) -> NDArray:
     Uses tessel2points + pinwheel_transform then crops/wraps to exactly N points.
     Only valid for D=2.
     """
-    xbase = tessel2points(pinwheel_base(), p=3)           # (3, 3, 2) → 3 pts on base triangle
+    xbase = tessel2points(pinwheel_base(), p=3, verbose = 0)# (3, 3, 2) → 3 pts on base triangle
     depth = int(np.log(N / 3) / np.log(5) + 1)
     intensity = 3 * 4 * 5**depth
     x = pinwheel_transform(xbase, depth=depth)             # (4*5^depth, 3, 2)

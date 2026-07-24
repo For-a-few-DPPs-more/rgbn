@@ -20,6 +20,7 @@ and the target centroid is returned directly with no LM solve at all.
 
 import numpy as np
 import warnings
+import time
 
 from .momentum_clusters import (
     moment_orders,
@@ -200,11 +201,13 @@ def momentum_fit(
     if geometry == "clusters":
         nc = distribution.shape[-2]
         if n >= nc:
-            warnings.warn(
-                f"There are few target atoms per cluster (K={nc}) relative to the number "
-                f"of points to fit (m={n}), so m was reduced to {nc - 1}. "
-                f"Increase cluster size (ideally K >= 2m) to prevent overfitting."
-            )
+            if verbose >= 1:
+                warnings.warn(
+                    f"There are few target atoms per cluster (K={nc}) relative to the number\n "
+                    f"of points to fit (m={n}), so m was reduced to {nc - 1}.\n "
+                    f"Increase cluster size (ideally K >= 2m) to prevent overfitting.\n"
+                )
+                time.sleep(1)
             n = max(1, nc - 1)
         
 
