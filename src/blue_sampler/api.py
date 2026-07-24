@@ -315,7 +315,7 @@ def sample_clusters(
     N: int = 2**15,
     D: int = 2,
     targets: NDArray | ClusterMethod  = "Goodlattice",
-    n_per_cluster: int = 32,
+    n_per_cluster: int = 4,
 ) -> NDArray:
     """
     Recursively partition a point set into N balanced clusters.
