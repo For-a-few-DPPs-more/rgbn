@@ -21,28 +21,25 @@ from numpy.typing import NDArray
 # highly efficient and scalable even for N = 1,000,000 and D <= 6.
 # ---------------------------------------------------------------------------
 
-class _KorobovOptimizer:
-    """
-    Internal optimizer for finding the best Korobov generating vector 'a'
-    using LLL lattice reduction to approximate the spectral test.
-    """
-    def __init__(self, N: int, D: int):
+class KorobovLLL:
+    def __init__(self, N, D):
         self.N = int(N)
         self.D = int(D)
 
-    def generator(self, a: int) -> NDArray:
-        """Compute z = (1, a, a^2, ..., a^{D-1}) mod N."""
+    def generator(self, a):
+        """z = (1, a, a², ..., a^(D-1)) mod N"""
         z = np.empty(self.D, dtype=np.int64)
         z[0] = 1
         for j in range(1, self.D):
             z[j] = (z[j - 1] * a) % self.N
         return z
 
-    def get_dual_basis(self, a: int) -> NDArray:
+    def get_dual_basis(self, a):
         """
-        Construct an explicit basis for the dual lattice L^perp.
-        Condition: h · z ≡ 0 (mod N).
-        The resulting D x D matrix has determinant exactly N.
+        Construit une base explicite du réseau dual L^perp.
+        Condition : h · z ≡ 0 (mod N).
+        La matrice B (D x D) a pour lignes les vecteurs de base.
+        Son déterminant est exactement N.
         """
         z = self.generator(a)
         B = np.zeros((self.D, self.D), dtype=np.int64)
@@ -53,17 +50,17 @@ class _KorobovOptimizer:
         return B
 
     @staticmethod
-    def lll_reduce(B: NDArray, delta: float = 0.99) -> NDArray:
+    def lll_reduce(B, delta=0.99):
         """
-        Simplified, standalone LLL reduction.
-        Finds a short vector in the lattice spanned by the rows of B.
-        For D <= 6, the first vector is virtually always the true shortest
-        vector (lambda_1), with an approximation guarantee of 2^{(D-1)/4} <= 2.37.
+        Réduction LLL simplifiée et autonome.
+        Trouve un vecteur court dans le réseau engendré par les lignes de B.
+        Pour D <= 6, le premier vecteur est presque toujours le plus court absolu (lambda1).
         """
         B = B.astype(np.float64).copy()
         D = B.shape[0]
         k = 1
 
+        # Gram-Schmidt Orthogonalization (GSO) interne
         def gso():
             B_star = np.zeros_like(B)
             mu = np.zeros((D, D))
@@ -75,63 +72,75 @@ class _KorobovOptimizer:
             return B_star, mu
 
         B_star, mu = gso()
-        
+
         while k < D:
-            # Size reduction
+            # 1. Réduction de taille (Size reduction)
             for j in range(k - 1, -1, -1):
                 q = round(mu[k, j])
                 if q != 0:
                     B[k] -= q * B[j]
-            
-            # Recompute GSO
+
+            # 2. Recalcul GSO (très rapide pour D <= 6 : ~200 opérations)
             B_star, mu = gso()
-            
-            # Lovász condition
+
+            # 3. Condition de Lovász
             norm_k = np.dot(B_star[k], B_star[k])
             norm_k_1 = np.dot(B_star[k-1], B_star[k-1])
-            
+
             if norm_k >= (delta - mu[k, k-1]**2) * norm_k_1:
                 k += 1
             else:
-                # Swap and step back
+                # Échange et retour en arrière
                 B[[k, k-1]] = B[[k-1, k]]
                 B_star, mu = gso()
                 k = max(1, k - 1)
-                
+
         return np.round(B).astype(np.int64)
 
-    def find_best_a(self, max_candidates: int | None = None) -> tuple[int, NDArray]:
+    def spectral_test_lll(self, a):
+        """Retourne une estimation très précise de lambda1 via LLL."""
+        B = self.get_dual_basis(a)
+        B_reduced = self.lll_reduce(B)
+        # Le premier vecteur de la base réduite est le plus court candidat
+        return float(np.linalg.norm(B_reduced[0].astype(np.float64)))
+
+    def optimize(self, max_candidates=None, verbose=True):
         """
-        Search for the generator 'a' coprime to N that maximises the 
-        shortest dual vector length (lambda_1).
+        Optimise le générateur 'a'.
+        max_candidates permet de limiter la recherche pour des tests rapides.
         """
-        candidates = [a for a in range(2, self.N) if gcd(a, self.N) == 1]
-        
-        if max_candidates is not None and len(candidates) > max_candidates:
-            # Deterministic random sampling for reproducibility of the search
-            rng = np.random.default_rng(42)
-            candidates = rng.choice(candidates, size=max_candidates, replace=False)
+        N = self.N
+        candidates = [a for a in range(2, N) if gcd(a, N) == 1]
+        if max_candidates is not None:
+            # Échantillonnage aléatoire ou tronqué pour les très grands N
+            candidates = np.random.choice(candidates, size=min(max_candidates, len(candidates)), replace=False)
             candidates = sorted(candidates)
 
-        best_a = 1
-        best_lambda1 = -1.0
-        best_z = self.generator(1)
+        best = {"a": None, "z": None, "lambda1": -1.0}
 
         for a in candidates:
-            B = self.get_dual_basis(a)
-            B_reduced = self.lll_reduce(B)
-            lambda1 = float(np.linalg.norm(B_reduced[0].astype(np.float64)))
-            
-            if lambda1 > best_lambda1:
-                best_lambda1 = lambda1
-                best_a = a
-                best_z = self.generator(a)
-                
-        return best_a, best_z
+            lam = self.spectral_test_lll(a)
+            if lam > best["lambda1"]:
+                best["a"] = int(a)
+                best["z"] = self.generator(a)
+                best["lambda1"] = lam
+                if verbose:
+                    print(f"a={a:7d}   λ1={lam:.6f}")
+
+        self.best = best
+
+        return best
+
+    def points(self, z = None):
+        """Retourne les N points de la règle de Korobov dans [0,1)^D."""
+        if z is None:
+            z = self.best["z"]
+        t = np.arange(self.N, dtype=np.int64)[:, None]
+        return ((t * z) % self.N) / self.N
 
 
 # ---------------------------------------------------------------------------
-# Public warm-start samplers
+# Public warmstart samplers
 # ---------------------------------------------------------------------------
 
 def _goodlattice_warmstart(
@@ -139,7 +148,7 @@ def _goodlattice_warmstart(
     D: int,
     seed: int | None = None,
     shift: bool = True,
-    max_candidates: int | None = 5000,
+    max_candidates: int | None = 100,
 ) -> NDArray:
     """
     Generate N points in [0, 1)^D using an optimised Korobov rank-1 lattice
@@ -201,8 +210,8 @@ def _goodlattice_warmstart(
     Niederreiter, H. (1992). Random Number Generation and Quasi-Monte Carlo
     Methods. SIAM.
     """
-    optimizer = _KorobovOptimizer(N, D)
-    _, z = optimizer.find_best_a(max_candidates=max_candidates)
+    optimizer = KorobovLLL(N, D)
+    z = optimizer.optimize(max_candidates=max_candidates, verbose = False)["z"]
 
     # Convert integer generator to fractional step sizes in [0, 1)
     z_float = z.astype(np.float64) / N
