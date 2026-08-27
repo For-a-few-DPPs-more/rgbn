@@ -13,15 +13,16 @@ Stealthy point patterns exhibit vanishing density fluctuations at low frequencie
 The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in both the number of points and the dimension. ⚡  
 They can generate e.g. 1 million 2D points in under 15 minutes on a standard CPU, and up to 30× faster on GPU. 
 
-> **Note**: Most methods implemented here support adaptive sampling from a target distribution. This feature is still experimental beyond 2d distributions
+> **Note**: The sampling methods implemented here support adaptive sampling from a target distribution. This feature is still experimental beyond 2d distributions
 
 ---
 
 # Positioning and scope
 
-There are many alternative approaches for blue-noise and hyperuniform point sampling, with an abundant literature from both theoretical and practical perspectives. These methods target different trade-offs between spectral quality, anisotropy, computational cost, dimensionality, implementation complexity, hardware requirements, etc. For example, some algorithms such as parallel Poisson-disk sampling are primarily designed for fast practical generation of visually convincing blue-noise patterns, where a moderate level of spectral suppression may be sufficient. Some algorithms are probably very interesting from a theoretical perspective, but reusable code can be hard to find. Other methods are highly optimized for specific domains such as 2D or 3D graphics. Some methods benefit strongly from GPU acceleration, like standard Gaussian blue noise, whereas others are designed to remain efficient on the CPU, like CCVT. Some rely on externally precomputed special sequences, like Sobol, but are thus very fast to use if the precomputed table is available. Notably, the FReSCo library provides very high-quality and scalable blue-noise samples based on non uniform fourier transform, but requires heavy spatial dependencies that need to be installed before using the software. All of these aspects are interesting and should be balanced according to the user's particular practical context.
+One can find extensive Blue-noise and hyperuniform sampling methods in the literature, all involving different trade-offs between spectral quality, computational cost, dimensionality, hardware requirements, implementation complexity, and support for adaptive sampling. To briefly cite some of them: **Perturbed lattices** are simple and fast; **Poisson-disk** is a mature and popular tool; **Void-and-Cluster masks** offer instant execution but are restricted to regular grids; **Relaxation methods** (such as Lloyd or CCVT) are classic but slow to converge and prone to structural artifacts; **Optimal Transport** provides flawless adaptive sampling but is computationally heavy; **GBN** (Gaussian blue noise) achieves ultra-high spatial quality but has quadratic complexity; and **FReSCo** combines ultra-high quality with near-linear complexity, though it requires installing heavy external nufft dependencies.
 
-blue-sampler is therefore not intended as a universal sampling method, but is primarily intended as a lightweight Python framework for mathematical and computational experiments on blue noise and hyperuniformity, where stronger spectral constraints (e.g. $S(k) \lesssim 10^{-3}$–$10^{-4}$ in the low-frequency regime), experiments beyond the usual 2D/3D settings, and rapid experimentation with different constructions are of interest.»
+blue-sampler is not intended as a universal replacement for these methods. It is a lightweight Python framework for experiments on blue noise and hyperuniformity, targeting simple installation (native Python code) and device flexibility (CPU/GPU), high spectral quality (achieving the commonly accepted "stealthy" criterions $S(k) \lesssim 10^{-3} - 10^{-4}$), adaptive sampling, and support for 3D and higher dimensions.
+
 
 ---
 
@@ -70,9 +71,10 @@ x = blue.sample_points(N, D, method="rgbn") #(N, D)
 
 | Method         | Description                              |
 |----------------|------------------------------------------|
-| `rgbn`         | Recursive Gaussian-Blue Noise 🔄         |
-| `nufft`        | Non-Uniform Fast Fourier Transform 📈    |
-| `bruteforce`   | Base GBN sampler (best quality, slower)  |
+| `bruteforce`   | original Gaussian-Blue-Noise sampler (high quality, slow)  |
+| `rgbn`         | Recursive Gaussian-Blue-Noise 🔄 (speed-up GBN with robust approximations)      |
+| `nufft`        | Non-Uniform FFT 📈 (speed-up spectral methods with fast fourier transform)    |
+| `cheap`        | fast and simple lattice jittering        |
 
 ---
 

@@ -42,7 +42,7 @@ from .momentum.momentum import _from_geometry
 
 from .viz import plot, plot_polygons
 
-BlueNoiseMethod = Literal["rgbn", "nufft", "bruteforce"]
+BlueNoiseMethod = Literal["rgbn", "nufft", "bruteforce", "cheap"]
 WarmstartMethod = Literal["Goodlattice", "Sobol", "Pinwheel"]
 ClusterMethod = Literal["Goodlattice", "Sobol", "Pinwheel"]
 
@@ -128,15 +128,20 @@ def sample_points(
         improve final quality. The default of 1.0 works well in most cases;
         only tune this if you have a specific speed/quality trade-off in mind.
 
-    method : {"rgbn", "nufft", "bruteforce"}, default "rgbn"
+    method : {"rgbn", "nufft", "bruteforce", "cheap"}, default "rgbn"
         Sampling algorithm:
 
         - ``"rgbn"``       — Recursive Gaussian Blue-Noise. Spatial loss,
           truncated neighbourhood. Linear complexity, recommended for most uses.
         - ``"nufft"``      — Non-Uniform Fast Fourier Transform. Spectral loss.
-          Good alternative for 2D; does **not** support a ``targets`` density.
-        - ``"bruteforce"`` — Exact GBN with no truncation. Best quality but
-          O(N²) cost. Automatically selected when N ≤ 2 000.
+            mostly similar performance to rgbn but depending on the backend, 
+            problem scale..., might give better speed or accuracy. 
+        - ``"bruteforce"`` — Exact GBN with no truncation. O(N²) cost
+            ultra high quality
+            ultra slow (unless N is <= few thousands)
+          Note: Automatically selected when N ≤ 2 000.
+        - ``"cheap"`` — simple, instantaneous, just a perturbed lattice. Take a 
+            grid and hide the grid structure with a random jittering.
 
     warmstart : {None, "Goodlattice", "Sobol", "Pinwheel", ndarray of shape (N, D)}, default None
         Initial point configuration before optimisation:
@@ -170,9 +175,14 @@ def sample_points(
     ``bruteforce`` is automatically used for N ≤ 2 000, regardless of the
     ``method`` argument, as it is optimal in that regime.
     """
-    methods = ["rgbn", "bruteforce", "nufft"]
+    methods = ["rgbn", "bruteforce", "nufft", "cheap"]
     if method not in methods:
         raise ValueError(f"unknown method {method!r}, must be one of {methods}")
+
+    if method == "cheap":
+        if targets is not None:
+            raise NotImplementedError(f"cheap sampling method doesn't support giving target distribution (only uniform sampling)")
+        return jitter(N, D, verbose)
 
     bruteforce = method == "bruteforce" or N <= 2_000
     nufft = method == "nufft"
@@ -681,3 +691,25 @@ def warmstart_points(
         f"unsupported warmstart={method!r}; expected None, "
         "'Goodlattice', 'Sobol', 'Pinwheel', or an ndarray of shape (N, D)."
     )
+
+def jitter(N, D, verbose):
+    """perturbed lattice based, cheap blue noise method"""
+    n = int(round(N ** (1 / D)))
+    if verbose >= 1:
+        warnings.warn(
+            f"user-given number of points N = {N} is not a power of dimension D = {D}; "
+            f"N will be rounded to {n}^{D} = {n**D} to build the lattice",
+            UserWarning,
+            stacklevel=2,
+        )
+    axes = [
+        (np.linspace(0, 1, n, endpoint = False) + 0.5) 
+        for _ in range(D)
+    ]
+    lattice = np.stack(
+        np.meshgrid(*axes, indexing="ij"),
+        axis=-1
+    ).reshape(-1, D)
+    u = (np.random.rand(len(lattice), D) - 0.5)/n
+    x = (lattice + u) % 1.0
+    return x
