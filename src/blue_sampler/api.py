@@ -107,7 +107,7 @@ def sample_points(
     lr: float = 1.0,
     method: BlueNoiseMethod = "rgbn",
     warmstart: NDArray | WarmstartMethod | None = None,
-    n_iter: int = 6,
+    n_iter_scale: int = 6,
     targets: NDArray | None = None,
     verbose: int = 1,
 ) -> NDArray:
@@ -136,10 +136,11 @@ def sample_points(
         - ``"nufft"``      — Non-Uniform Fast Fourier Transform. Spectral loss.
             mostly similar performance to rgbn but depending on the backend, 
             problem scale..., might give better speed or accuracy. 
-        - ``"bruteforce"`` — Exact GBN with no truncation. O(N²) cost
+        - ``"bruteforce"`` — Exact GBN with no truncation. O(N²) cost per iteration, and O(N^3) total cost 
+            because number of iterations also scales like N
             ultra high quality
             ultra slow (unless N is <= few thousands)
-          Note: Automatically selected when N ≤ 2 000.
+          Note: bruteforce is automatically selected when N ≤ 2 000.
         - ``"cheap"`` — simple, instantaneous, just a perturbed lattice. Take a 
             grid and hide the grid structure with a random jittering.
 
@@ -154,10 +155,10 @@ def sample_points(
           (2D only). Falls back to Sobol for D > 2.
         - ndarray         — use the provided array as the starting configuration.
         
-    n_iter : int, default 6
-        Number of solver iterations. Each iteration runs 10 gradient steps
-        plus one structural gridification step (neighbour lookup).
-        More iterations yield better quality at the cost of runtime.
+    n_iter_scale : int, default 6
+        Scale the number of solver iterations. More iterations yield better quality at the cost of runtime.
+        Note: Depending on the method or context, will be interpreted differently 
+        because different cases require different number of iterations.
     targets : ndarray of shape (K, D) or str, optional
         Atoms describing a target density for adaptive sampling.
         Can also be a path to an image file, e.g. ``targets="zebra.jpg"``.
@@ -176,6 +177,7 @@ def sample_points(
     ``method`` argument, as it is optimal in that regime.
     """
     methods = ["rgbn", "bruteforce", "nufft", "cheap"]
+    n_iter = n_iter_scale
     if method not in methods:
         raise ValueError(f"unknown method {method!r}, must be one of {methods}")
 
@@ -216,6 +218,12 @@ def sample_points(
 
     logger = ProgressLogger(D, verbose)
     if bruteforce:
+        if D == 2:
+            n_iter *= max(10, int(N/24))
+        if D == 3:
+            n_iter *= max(4, int(N/600))
+        if D >= 4:
+            n_iter *= max(4, int(N/2000))
         ctx = logger.enter_level(N, D, 0)
         ctx.start()
         blue = _bruteforce_pipeline(
