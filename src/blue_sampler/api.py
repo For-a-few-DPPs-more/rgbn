@@ -221,9 +221,9 @@ def sample_points(
         if D == 2:
             n_iter *= max(10, int(N/24))
         if D == 3:
-            n_iter *= max(4, int(N/600))
+            n_iter *= max(10, int(N/600))
         if D >= 4:
-            n_iter *= max(4, int(N/2000))
+            n_iter *= max(10, int(N/2000))
         ctx = logger.enter_level(N, D, 0)
         ctx.start()
         blue = _bruteforce_pipeline(
