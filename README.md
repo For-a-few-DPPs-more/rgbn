@@ -11,7 +11,7 @@
 Stealthy point patterns exhibit vanishing density fluctuations at low frequencies, making them particularly suited for **Monte Carlo** integration 🎯, **image stippling**, and any application requiring well-distributed, low-discrepancy points. 
 
 The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in both the number of points and the dimension. ⚡  
-They can generate e.g. 1 million 2D points in under 15 minutes on a standard CPU, and up to 30× faster on GPU. 
+They can generate e.g. 1 million 2D (resp 3D) points in under 10 minutes (resp 30 minutes) on a standard CPU, and up to 30× faster on GPU (30s resp 1 minute). 
 
 > **Note**: The sampling methods implemented here support adaptive sampling from a target distribution. This feature is still experimental beyond 2d distributions
 
@@ -19,7 +19,7 @@ They can generate e.g. 1 million 2D points in under 15 minutes on a standard CPU
 
 # Positioning and scope
 
-One can find extensive Blue-noise and hyperuniform sampling methods in the literature, all involving different trade-offs between spectral quality, computational cost, dimensionality, hardware requirements, implementation complexity, and support for adaptive sampling. To briefly cite some of them: **Perturbed lattices** are simple and fast; **Poisson-disk** is a mature and popular tool; **Void-and-Cluster masks** offer instant execution but are restricted to regular grids; **Relaxation methods** (such as Lloyd or CCVT) are classic but slow to converge and prone to structural artifacts; **Optimal Transport** (BNOT) provides natural adaptive sampling but is computationally heavy; **GBN** (Gaussian blue noise) achieves ultra-high spatial quality but has quadratic complexity; and **FReSCo** combines ultra-high quality with near-linear complexity, though it requires installing heavy external nufft dependencies.
+One can find extensive Blue-noise and hyperuniform sampling methods in the literature, all involving different trade-offs between spectral quality, computational cost, dimensionality, hardware requirements, implementation complexity, and support for adaptive sampling. To briefly cite some of them: **Perturbed lattices** are simple and fast; **Poisson-disk** is a mature and popular tool; **Void-and-Cluster masks** offer instant execution but are restricted to regular grids; **Relaxation methods** (such as Lloyd or CCVT) are classic but slow to converge and prone to structural artifacts; **Optimal Transport** (BNOT) provides natural adaptive sampling but is computationally heavy; **GBN** (Gaussian blue noise) achieves ultra-high spatial quality but has quadratic complexity; and **FReSCo** combines ultra-high quality with near-linear complexity, though it requires installing heavy external dependencies or familiarity with docker containers.
 
 blue-sampler is not intended as a universal replacement for these methods. It is a lightweight Python framework for experiments on blue noise and hyperuniformity, targeting simple installation (native Python code) and device flexibility (CPU/GPU), high spectral quality (achieving the commonly accepted "stealthy" criterions $S(k) \lesssim 10^{-3} - 10^{-4}$), adaptive sampling, and support for 3D and higher dimensions.
 
