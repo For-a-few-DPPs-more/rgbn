@@ -60,7 +60,7 @@ x = blue.im2quads("plots/vangogh.jpg")   #quadrilaterals
   <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebraquads.png" width="45%" alt="Example 2">
   <br>
   <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghpoints.png" width="45%" alt="Example 3">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghquadspoints.png" width="45%" alt="Example 4">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghquads.png" width="45%" alt="Example 4">
 </p>
 
 ---
