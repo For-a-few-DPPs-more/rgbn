@@ -56,11 +56,11 @@ x = blue.im2quads("plots/vangogh.jpg")   #quadrilaterals
 ## 🖼️ Example
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/zebrapoints.png" width="45%" alt="Example 1">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/zebraquads.png" width="45%" alt="Example 2">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebrapoints.png" width="45%" alt="Example 1">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebraquads.png" width="45%" alt="Example 2">
   <br>
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/vangoghpoints.png" width="45%" alt="Example 3">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/vangoghquadspoints.png" width="45%" alt="Example 4">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghpoints.png" width="45%" alt="Example 3">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghquadspoints.png" width="45%" alt="Example 4">
 </p>
 
 ---
