@@ -41,14 +41,14 @@ import blue_sampler as blue
 
 # Generate 10,000 2D blue-noise points
 x = blue.sample_points(N=10_000, D=2)
-blue.plot(x) 📈
+blue.plot(x) 
 
 # Structure factor
-blue.plot_structure_factor(x) 📊
+blue.plot_structure_factor(x) 
 
 # Image stippling
-x = blue.im2points("zebra.jpg") 🖼️ #return points
-x = blue.im2quads("vangogh.jpg")   #quadrilaterals
+x = blue.im2points("plots/zebra.jpg") #return points
+x = blue.im2quads("plots/vangogh.jpg")   #quadrilaterals
 ```
 
 ---
@@ -56,7 +56,11 @@ x = blue.im2quads("vangogh.jpg")   #quadrilaterals
 ## 🖼️ Example
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/zebrapoints.png" width="650" alt="Blue noise stippling example">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/zebrapoints.png" width="45%" alt="Example 1">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/zebraquads.png" width="45%" alt="Example 2">
+  <br>
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/vangoghpoints.png" width="45%" alt="Example 3">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/vangoghquadspoints.png" width="45%" alt="Example 4">
 </p>
 
 ---
@@ -80,44 +84,44 @@ x = blue.sample_points(N, D, method="rgbn") #(N, D)
 
 ## Alternative Samplers
 
-### Sobol sequence
+### Sobol sequence 📏
 
 ```python
 x = blue.sobol(N, D) #(N, D)
 ```
-Low-discrepancy quasi-random sequence. 📏
+Low-discrepancy quasi-random sequence. 
 
 ### Clusters
 
 ```python
 # Raw clusters
 cl = blue.sample_clusters(N, D) #(N, K, D)
-blue.plot_clusters(cl) 🔗
+blue.plot_clusters(cl) 
 
 # Convert to point set
 x = blue.cluster2points(cl) #(N, m, D)
 ```
 
-### STIT Tessellations (2D only)
+### STIT Tessellations (2D only) 🧩
 
 ```python
 # Raw STIT tessellation (quadrilaterals)
 ts = blue.sample_tessels(N) #(N, 4, D=2)
-blue.plot_tessels(ts) 🧩
+blue.plot_tessels(ts) 
 
 # Convert to point set
 x = blue.tessel2points(ts) #(N, m, D=2)
 ```
 
-### Pinwheel Tilings (2D only)
+### Pinwheel Tilings (2D only) 𖣘
 
 ```python
 # Base pinwheel triangle
-pw0 = blue.pinwheel_base() 𖣘 #(3, D=2)
+pw0 = blue.pinwheel_base()  #(3, D=2)
 
 # Triangulation level 4
 pw4 = blue.pinwheel_transform(pw0, depth=4) #(4*5**depth, 3, D=2)
-blue.plot_polygons(pw4) 🔺
+blue.plot_polygons(pw4) 
 
 #===============================
 # Convert Pinwheel to point set:
