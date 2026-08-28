@@ -173,7 +173,7 @@ def sample_points(
 
     Notes
     -----
-    ``bruteforce`` is automatically used for N ≤ 2 000, regardless of the
+    ``bruteforce`` is automatically used for N ≤ 1 000, regardless of the
     ``method`` argument, as it is optimal in that regime.
     """
     methods = ["rgbn", "bruteforce", "nufft", "cheap"]
@@ -186,7 +186,7 @@ def sample_points(
             raise NotImplementedError(f"cheap sampling method doesn't support giving target distribution (only uniform sampling)")
         return jitter(N, D, verbose)
 
-    bruteforce = method == "bruteforce" or N <= 2_000
+    bruteforce = method == "bruteforce" or (N <= 1_000 if D  == 2 else N <= 3_000)
     nufft = method == "nufft"
 
     has_warmstart = warmstart is not None

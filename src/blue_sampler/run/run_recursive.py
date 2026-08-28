@@ -62,18 +62,17 @@ def _recursive_pipeline(
     """Recursive stealthy-sampling pipeline. Spawns child pipelines when N is large."""
     try:
         has_target = target is not None
-        is_root    = _is_root or (N <= 2_000) or (x is not None)
-        brute_thresh = 2000
+        is_root    = _is_root or (N <= 3_000) or (x is not None)
+        brute_thresh = 1000 if D == 2 else 3_000
+        brute_ITER = 600 if D == 2 else 60
         if x is None:
             x = np.random.rand(N, D)
         if has_target and D == 2:
             #spatial_radius = 8
             S = 0.5
-            is_root = is_root or N <= 5_000
-            brute_thresh = 750
-            N_ITER = 12
-            if is_root:
-                N_ITER = 24
+        if is_root:
+            N_ITER = 50
+
         ctx = logger.enter_level(N, D, N_ITER)
         Dsimp      = min(D, 3)
         IJK, _, Axes = grid_shape(N, D)
@@ -120,13 +119,18 @@ def _recursive_pipeline(
             lr_macro = lr_micro
   
         else:
-            def macro_grad(x_val):
-                x_flat = x_val.reshape(-1, D)
-                def body(acc, args):
-                    k, k_ = args
-                    return acc + spectral_kernel(x_flat, k, k_), None
-                out, _ = jax.lax.scan(body, jnp.zeros_like(x_flat), (K_w, K_))
-                return out.reshape(*IJK, D)
+            if D <= 3:
+                def macro_grad(x_val):
+                    x_flat = x_val.reshape(-1, D)
+                    def body(acc, args):
+                        k, k_ = args
+                        return acc + spectral_kernel(x_flat, k, k_), None
+                    out, _ = jax.lax.scan(body, jnp.zeros_like(x_flat), (K_w, K_))
+                    return out.reshape(*IJK, D)
+            else:
+                #macro kernel is useless in 4D+
+                def macro_grad(x_val):
+                    return 0
     
         sn = SquareNet(gridshape=IJK, max_iter=50, verbose=0)
 
@@ -184,7 +188,7 @@ def _recursive_pipeline(
             if bruteforce:
                 ctx.start()
                 x_pts = _bruteforce_pipeline(
-                    N, D, N_ITER, ctx = ctx, 
+                    N, D, brute_ITER, ctx = ctx, 
                     target=target, 
                 )(x)
                 x_pts   = prepare_points(np.asarray(x_pts), N, IJK, D)
@@ -215,7 +219,7 @@ def _recursive_pipeline(
             ctx.start()
             if bruteforce:
                 x_pts = _bruteforce_pipeline(
-                    N, D, N_ITER, ctx = ctx, 
+                    N, D, brute_ITER, ctx = ctx, 
                     target=target, 
                 )(xparent)
             else:
