@@ -58,7 +58,7 @@ x = blue.im2quads("plots/vangogh.jpg")   #quadrilaterals
 Uniform sampling, Gaussian Blue Noise (3k points)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/huniformpoints.png" width="95%" alt="Example">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/huniformpoints.png" width="45%" alt="Example">
 </p>
 
 Image stippling with points (100k points)
