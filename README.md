@@ -61,18 +61,10 @@ Uniform sampling, Gaussian Blue Noise (3k points)
   <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/huniformpoints.png" width="45%" alt="Example">
 </p>
 
-Image stippling with points (100k points)
+Image stippling with points (20k points)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebrapoints.png" width="45%" alt="Example 1">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghpoints.png" width="45%" alt="Example 2">
-</p>
-
-Image stippling with polygons (30k polygons)
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebraquads.png" width="45%" alt="Example 3">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghquads.png" width="45%" alt="Example 4">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/montage.png" width="95%" alt="Example 1">
 </p>
 
 ---
