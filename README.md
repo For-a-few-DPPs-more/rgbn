@@ -8,9 +8,9 @@
 
 **Generate large stealthy point patterns** on the unit torus $[0, 1)^D$. 📐
 
-Stealthy point patterns exhibit vanishing density fluctuations at low frequencies, making them particularly suited for **Monte Carlo** integration 🎯, **image stippling**, and any application requiring well-distributed, low-discrepancy points. 
+Stealthy point patterns exhibit vanishing density fluctuations at low frequencies, making them particularly suited for **Monte Carlo** integration, **image stippling**, and any application requiring well-distributed, low-discrepancy points. 
 
-The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in both the number of points and the dimension. ⚡  
+The main blue-noise samplers (**RGBN** and **NUFFT**) offer **linear** complexity in the number of points.  
 They can generate e.g. 1 million 2D (resp 3D) points in under 10 minutes (resp 30 minutes) on a standard CPU, and up to 30× faster on GPU (30s resp 1 minute). 
 
 > **Note**: The sampling methods implemented here support adaptive sampling from a target distribution. This feature is still experimental beyond 2d distributions
@@ -19,7 +19,7 @@ They can generate e.g. 1 million 2D (resp 3D) points in under 10 minutes (resp 3
 
 # Positioning and scope
 
-One can find extensive Blue-noise and hyperuniform sampling methods in the literature, all involving different trade-offs between spectral quality, computational cost, dimensionality, hardware requirements, implementation complexity, and support for adaptive sampling. To briefly cite some of them: **Perturbed lattices** are simple and fast; **Poisson-disk** is a mature and popular tool; **Void-and-Cluster masks** offer instant execution but are restricted to regular grids; **Relaxation methods** (such as Lloyd or CCVT) are classic but slow to converge and prone to structural artifacts; **Optimal Transport** (BNOT) provides natural adaptive sampling but is computationally heavy; **GBN** (Gaussian blue noise) achieves ultra-high spatial quality but has quadratic complexity; and **FReSCo** combines ultra-high quality with near-linear complexity, though it requires installing heavy external dependencies or familiarity with docker containers.
+One can find extensive Blue-noise and hyperuniform sampling methods in the literature, all involving different trade-offs between spectral quality, computational cost, dimensionality, hardware requirements, implementation complexity, and support for adaptive sampling. To briefly cite some of them: **Perturbed lattices** are simple and fast; **Poisson-disk** is a mature and popular tool; **Void-and-Cluster masks** offer instant execution but are restricted to regular grids; **Relaxation methods** (such as Lloyd or CCVT) are classic but slow to converge and prone to structural artifacts; **Optimal Transport** (BNOT) provides natural adaptive sampling but is computationally heavy; **Gaussian blue noise** (GBN) achieves ultra-high spatial quality but has quadratic complexity; and **Fast reciprocal space Correlator** (FReSCo) combines ultra-high quality with near-linear complexity, though it requires installing heavy external dependencies or familiarity with docker containers.
 
 blue-sampler is not intended as a universal replacement for these methods. It is a lightweight Python framework for experiments on blue noise and hyperuniformity, targeting simple installation (native Python code) and device flexibility (CPU/GPU), high spectral quality (achieving the commonly accepted "stealthy" criterions $S(k) \lesssim 10^{-3} - 10^{-4}$), adaptive sampling, and support for 3D and higher dimensions.
 
@@ -61,18 +61,10 @@ Uniform sampling, Gaussian Blue Noise (3k points)
   <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/huniformpoints.png" width="45%" alt="Example">
 </p>
 
-Image stippling with points (100k points)
+Image stippling with points (20k points)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebrapoints.png" width="45%" alt="Example 1">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghpoints.png" width="45%" alt="Example 2">
-</p>
-
-Image stippling with polygons (30k polygons)
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/zebraquads.png" width="45%" alt="Example 3">
-  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/vangoghquads.png" width="45%" alt="Example 4">
+  <img src="https://raw.githubusercontent.com/For-a-few-DPPs-more/rgbn/main/plots/montage.png" width="95%" alt="Example 1">
 </p>
 
 ---
@@ -87,9 +79,9 @@ x = blue.sample_points(N, D, method="rgbn") #(N, D)
 
 | Method         | Description                              |
 |----------------|------------------------------------------|
-| `bruteforce`   | original Gaussian-Blue-Noise sampler (high quality, slow)  |
-| `rgbn`         | Recursive Gaussian-Blue-Noise 🔄 (speed-up GBN with robust approximations)      |
-| `nufft`        | Non-Uniform FFT 📈 (speed-up spectral methods with fast fourier transform)    |
+| `bruteforce`   | original Gaussian-Blue-Noise sampler (high quality, slow), A. G. M. Ahmed, J. Ren, and P. Wonka.  |
+| `rgbn`         | Recursive Gaussian-Blue-Noise (speed-up GBN with robust approximations)      |
+| `nufft`        | Non-Uniform FFT (speed-up spectral methods with fast fourier transform)    |
 | `cheap`        | fast and simple lattice jittering        |
 
 ---
