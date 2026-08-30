@@ -119,18 +119,13 @@ def _recursive_pipeline(
             lr_macro = lr_micro
   
         else:
-            if D <= 3:
-                def macro_grad(x_val):
-                    x_flat = x_val.reshape(-1, D)
-                    def body(acc, args):
-                        k, k_ = args
-                        return acc + spectral_kernel(x_flat, k, k_), None
-                    out, _ = jax.lax.scan(body, jnp.zeros_like(x_flat), (K_w, K_))
-                    return out.reshape(*IJK, D)
-            else:
-                #macro kernel is useless in 4D+
-                def macro_grad(x_val):
-                    return 0
+            def macro_grad(x_val):
+                x_flat = x_val.reshape(-1, D)
+                def body(acc, args):
+                    k, k_ = args
+                    return acc + spectral_kernel(x_flat, k, k_), None
+                out, _ = jax.lax.scan(body, jnp.zeros_like(x_flat), (K_w, K_))
+                return out.reshape(*IJK, D)
     
         sn = SquareNet(gridshape=IJK, max_iter=50, verbose=0)
 
