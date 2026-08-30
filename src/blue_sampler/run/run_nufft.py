@@ -217,14 +217,14 @@ def _nufft_pipeline(
       r_warmup = 10
       r_final  = 7
     if D == 3:
-      r_warmup = 5
+      r_warmup = 6
       r_final  = 5
     if D == 4:
       r_warmup = 4
       r_final  = 4
     if D >= 5:
-      r_warmup = 3
-      r_final  = 3
+      r_warmup = 4
+      r_final  = 4
     
     shifts_warmup = get_shifts(r_warmup, D)
     shifts_final  = get_shifts(r_final, D)
